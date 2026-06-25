@@ -25,7 +25,7 @@ class MemberService(
         if (memberRepository.existsByEmail(request.email)) {
             throw ApiErrorException(ResponseCodeEnum.DUPLICATED_EMAIL)
         }
-        return memberRepository.save<Member>(
+        return memberRepository.save(
             Member.of(
                 lastName = request.lastName,
                 firstName = request.firstName,
