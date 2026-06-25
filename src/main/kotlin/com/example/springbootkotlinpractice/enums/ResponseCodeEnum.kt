@@ -14,15 +14,16 @@ enum class ResponseCodeEnum(
 
     // Custom Response Code (1000 ~ )
     NOT_FOUND_USER(HttpStatus.NOT_FOUND, "1000", "회원정보가 존재하지 않습니다."),
-    NOT_FOUND_PEARL_BAND(HttpStatus.NOT_FOUND, "1001", "펄밴드 정보가 존재하지 않습니다."),
-    DUPLICATE_RF_ID(HttpStatus.CONFLICT, "1002", "이미 사용중인 RF ID 입니다."),
-    DUPLICATE_WATCH_ID(HttpStatus.CONFLICT, "1003", "이미 사용중인 WATCH ID 입니다."),
-    NOT_FOUND_CONTENTS_PC_TYPE(HttpStatus.NOT_FOUND, "1004", "존재하지 않는 콘텐츠 PC 유형 입니다."),
-    NOT_FOUND_SEA_FOOD_INFO(HttpStatus.NOT_FOUND, "1005", "매직 쿠킹랩 정보가 없습니다."),
-    NOT_FOUND_CONTENT(HttpStatus.NOT_FOUND, "1006", "개인화 컨텐츠 정보가 존재하지 않습니다."),
-    NOT_FOUND_SOCKET_SUBSCRIBE_INFO(HttpStatus.NOT_FOUND, "1007", "소켓 구독 정보가 존재하지 않습니다."),
-    NOT_FOUND_BABY_SHARK_IMAGE(HttpStatus.NOT_FOUND, "1008", "아기상어 이미지가 존재하지 않습니다."),
-    NOT_FOUND_BABY_SHARK_MUSIC(HttpStatus.NOT_FOUND, "1009", "아기상어 음원 데이터가 존재하지 않습니다."),
+    DUPLICATED_EMAIL(HttpStatus.CONFLICT, "1001", "이미 사용중인 이메일 입니다."),
+//    NOT_FOUND_PEARL_BAND(HttpStatus.NOT_FOUND, "1001", "펄밴드 정보가 존재하지 않습니다."),
+//    DUPLICATE_RF_ID(HttpStatus.CONFLICT, "1002", "이미 사용중인 RF ID 입니다."),
+//    DUPLICATE_WATCH_ID(HttpStatus.CONFLICT, "1003", "이미 사용중인 WATCH ID 입니다."),
+//    NOT_FOUND_CONTENTS_PC_TYPE(HttpStatus.NOT_FOUND, "1004", "존재하지 않는 콘텐츠 PC 유형 입니다."),
+//    NOT_FOUND_SEA_FOOD_INFO(HttpStatus.NOT_FOUND, "1005", "매직 쿠킹랩 정보가 없습니다."),
+//    NOT_FOUND_CONTENT(HttpStatus.NOT_FOUND, "1006", "개인화 컨텐츠 정보가 존재하지 않습니다."),
+//    NOT_FOUND_SOCKET_SUBSCRIBE_INFO(HttpStatus.NOT_FOUND, "1007", "소켓 구독 정보가 존재하지 않습니다."),
+//    NOT_FOUND_BABY_SHARK_IMAGE(HttpStatus.NOT_FOUND, "1008", "아기상어 이미지가 존재하지 않습니다."),
+//    NOT_FOUND_BABY_SHARK_MUSIC(HttpStatus.NOT_FOUND, "1009", "아기상어 음원 데이터가 존재하지 않습니다."),
 
     // Auth Error (4000 ~)
     INVALID_API_KEY(HttpStatus.UNAUTHORIZED, "4010", "유효하지 않은 API Key 입니다."),

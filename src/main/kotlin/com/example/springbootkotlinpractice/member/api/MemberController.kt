@@ -6,6 +6,7 @@ import com.example.springbootkotlinpractice.member.dto.MemberCreateRequest
 import com.example.springbootkotlinpractice.member.dto.MemberResponse
 import com.example.springbootkotlinpractice.member.entity.Member
 import com.example.springbootkotlinpractice.member.service.MemberService
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -34,7 +35,7 @@ class MemberController(
 
     @PostMapping
     fun insertMember(
-        @RequestBody request: MemberCreateRequest
+        @RequestBody @Valid request: MemberCreateRequest
     ): ResponseEntity<CommonResponse<MemberResponse>> {
         val member: Member = memberService.insertMember(request)
         return ResponseHandler.created(

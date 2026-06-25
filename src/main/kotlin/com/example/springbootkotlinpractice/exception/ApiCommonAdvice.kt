@@ -3,6 +3,7 @@ package com.example.springbootkotlinpractice.exception
 import com.example.springbootkotlinpractice.dto.common.CommonResponse
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -45,13 +46,18 @@ class ApiCommonAdvice {
         log.error(e.message, e)
 
         val cause = e.cause
-        if (cause is InvalidFormatException && cause.path.isNotEmpty()) {
+        if (cause is MismatchedInputException && cause.path.isNotEmpty()) {
             val fieldName = cause.path.first().fieldName
-            val rejectedValue = cause.value
-            val targetType = cause.targetType
-            return CommonResponse.schemaValidateErrorResponse(
-                listOf(ErrorField.fromInvalidFormat(fieldName, rejectedValue, targetType)),
-            )
+            return when (cause) {
+                // 타입 불일치 (날짜/숫자/Enum 등)
+                is InvalidFormatException -> CommonResponse.schemaValidateErrorResponse(
+                    listOf(ErrorField.fromInvalidFormat(fieldName, cause.value, cause.targetType)),
+                )
+                // 필수 필드 누락 / null (Kotlin non-null 파라미터 미충족 포함)
+                else -> CommonResponse.schemaValidateErrorResponse(
+                    listOf(ErrorField.of(fieldName, null, "필수 입력값 입니다.")),
+                )
+            }
         }
 
         return CommonResponse.failResponse<Nothing>(ResponseCodeEnum.BAD_REQUEST)
