@@ -34,7 +34,7 @@ class ApiCommonAdvice {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun handleMethodArgumentNotValidException(
         e: MethodArgumentNotValidException,
-    ): CommonResponse<List<ErrorField>> {
+    ): CommonResponse<ErrorFieldResponse> {
         log.error(e.message, e)
         val errorFieldList = e.bindingResult.fieldErrors.map { ErrorField.from(it) }
         return CommonResponse.schemaValidateErrorResponse(errorFieldList)
@@ -69,7 +69,7 @@ class ApiCommonAdvice {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun handleMethodArgumentTypeMismatchException(
         e: MethodArgumentTypeMismatchException,
-    ): CommonResponse<List<ErrorField>> {
+    ): CommonResponse<ErrorFieldResponse> {
         log.error(e.message, e)
         return CommonResponse.schemaValidateErrorResponse(
             listOf(ErrorField.fromInvalidFormat(e.name, e.value, e.requiredType)),
@@ -81,7 +81,7 @@ class ApiCommonAdvice {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun handleHandlerMethodValidationException(
         e: HandlerMethodValidationException,
-    ): CommonResponse<List<ErrorField>> {
+    ): CommonResponse<ErrorFieldResponse> {
         log.error(e.message, e)
         val errorFieldList = e.parameterValidationResults.flatMap { result ->
             val fieldName = result.methodParameter.parameterName
