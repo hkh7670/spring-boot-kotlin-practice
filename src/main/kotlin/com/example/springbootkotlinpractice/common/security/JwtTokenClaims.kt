@@ -10,7 +10,11 @@ data class JwtTokenClaims(
 ) {
     companion object {
         fun of(id: Long, tokenType: TokenType, provider: JoinProvider): JwtTokenClaims {
-            return JwtTokenClaims(id, tokenType, provider)
+            return JwtTokenClaims(
+                id = id,
+                tokenType = tokenType,
+                provider = provider,
+            )
         }
 
         fun of(id: Long, tokenType: TokenType): JwtTokenClaims {
