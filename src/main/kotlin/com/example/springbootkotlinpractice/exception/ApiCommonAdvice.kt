@@ -1,6 +1,6 @@
 package com.example.springbootkotlinpractice.exception
 
-import com.example.springbootkotlinpractice.dto.common.CommonResponse
+import com.example.springbootkotlinpractice.common.dto.CommonResponse
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import com.fasterxml.jackson.databind.exc.MismatchedInputException

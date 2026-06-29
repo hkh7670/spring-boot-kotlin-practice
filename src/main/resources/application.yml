@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: spring-boot-kotlin-practice
+  datasource:
+    url: jdbc:h2:mem:practice;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+springdoc:
+  swagger-ui:
+    groups-order: DESC
+    tags-sorter: alpha
+    operations-sorter: method
+    disable-swagger-default-url: true
+    display-request-duration: true
+    defaultModelsExpandDepth: 2
+    defaultModelExpandDepth: 2
+    path: /swagger.html
+  api-docs:
+    path: /api-docs
+  show-actuator: true
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+  writer-with-default-pretty-printer: true
+  model-and-view-allowed: true
+
+jwt:
+  secret: Z9AeK9oKuYJMAEgZPkr99JYEkNZ15gYzpbSoVzV68d4
+  access-token-validity-ms: 1800000      # 30분
+  refresh-token-validity-ms: 1209600000  # 14일
+
+aes:
+  secret: ahcxprF8G07ogIWhZ/Lp+VmEM7AvosI8rmhQunuKrkM=
+  init-vector: a1ze0V5ye2iz4fc7apFk/w==

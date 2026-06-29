@@ -1,8 +1,10 @@
 plugins {
-    kotlin("jvm") version "2.4.0"
-    kotlin("plugin.spring") version "1.9.25"
-    kotlin("plugin.jpa") version "1.9.25"
-    id("org.springframework.boot") version "3.5.15"
+    val kotlinVersion = "2.4.0"
+    kotlin("jvm") version kotlinVersion
+    kotlin("plugin.spring") version kotlinVersion
+    kotlin("plugin.jpa") version kotlinVersion
+    kotlin("kapt") version kotlinVersion
+    id("org.springframework.boot") version "3.5.16"
     id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -18,7 +20,7 @@ description = "spring-boot-kotlin-practice"
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -32,10 +34,23 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+
+    // JWT (jjwt 0.12.x)
+    implementation("io.jsonwebtoken:jjwt-api:0.13.0")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
+
+    // OpenFeign QueryDSL 포크 (Jakarta / Spring Boot 3.x)
+    implementation("io.github.openfeign.querydsl:querydsl-jpa:7.4.0")
+    kapt("io.github.openfeign.querydsl:querydsl-apt:7.4.0:jakarta")
+
     runtimeOnly("com.h2database:h2")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    /* Swagger */
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14")
 }
 
 kotlin {

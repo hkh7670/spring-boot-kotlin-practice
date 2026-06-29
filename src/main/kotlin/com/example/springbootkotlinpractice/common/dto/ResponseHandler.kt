@@ -1,4 +1,4 @@
-package com.example.springbootkotlinpractice.dto.common
+package com.example.springbootkotlinpractice.common.dto
 
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import org.springframework.http.HttpStatus
