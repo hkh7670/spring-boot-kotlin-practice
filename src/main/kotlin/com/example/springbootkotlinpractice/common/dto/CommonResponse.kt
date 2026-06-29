@@ -1,8 +1,8 @@
 package com.example.springbootkotlinpractice.common.dto
 
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
-import com.example.springbootkotlinpractice.exception.ErrorField
-import com.example.springbootkotlinpractice.exception.ErrorFieldResponse
+import com.example.springbootkotlinpractice.exception.ErrorInfo
+import com.example.springbootkotlinpractice.exception.ErrorInfoResponse
 
 data class CommonResponse<T>(
     val resultCode: String,
@@ -56,11 +56,11 @@ data class CommonResponse<T>(
             )
         }
 
-        fun schemaValidateErrorResponse(errorFieldList: List<ErrorField>): CommonResponse<ErrorFieldResponse> {
+        fun schemaValidateErrorResponse(errorInfoList: List<ErrorInfo>): CommonResponse<ErrorInfoResponse> {
             return CommonResponse(
                 resultCode = ResponseCodeEnum.SCHEMA_VALIDATE_ERROR.resultCode,
                 resultMsg = ResponseCodeEnum.SCHEMA_VALIDATE_ERROR.resultMsg,
-                data = ErrorFieldResponse(errorFieldList),
+                data = ErrorInfoResponse(errorInfoList),
             )
         }
 

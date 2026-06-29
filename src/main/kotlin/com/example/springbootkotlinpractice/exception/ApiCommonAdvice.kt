@@ -34,10 +34,10 @@ class ApiCommonAdvice {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun handleMethodArgumentNotValidException(
         e: MethodArgumentNotValidException,
-    ): CommonResponse<ErrorFieldResponse> {
+    ): CommonResponse<ErrorInfoResponse> {
         log.error(e.message, e)
-        val errorFieldList = e.bindingResult.fieldErrors.map { ErrorField.from(it) }
-        return CommonResponse.schemaValidateErrorResponse(errorFieldList)
+        val errorInfoList = e.bindingResult.fieldErrors.map { ErrorInfo.from(it) }
+        return CommonResponse.schemaValidateErrorResponse(errorInfoList)
     }
 
     // RequestBody JSON 파싱 에러 처리 (날짜 형식 오류 등)
@@ -52,11 +52,11 @@ class ApiCommonAdvice {
             return when (cause) {
                 // 타입 불일치 (날짜/숫자/Enum 등)
                 is InvalidFormatException -> CommonResponse.schemaValidateErrorResponse(
-                    listOf(ErrorField.fromInvalidFormat(fieldName, cause.value, cause.targetType)),
+                    listOf(ErrorInfo.fromInvalidFormat(fieldName, cause.value, cause.targetType)),
                 )
                 // 필수 필드 누락 / null (Kotlin non-null 파라미터 미충족 포함)
                 else -> CommonResponse.schemaValidateErrorResponse(
-                    listOf(ErrorField.of(fieldName, null, "필수 입력값 입니다.")),
+                    listOf(ErrorInfo.of(fieldName, null, "필수 입력값 입니다.")),
                 )
             }
         }
@@ -69,10 +69,10 @@ class ApiCommonAdvice {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun handleMethodArgumentTypeMismatchException(
         e: MethodArgumentTypeMismatchException,
-    ): CommonResponse<ErrorFieldResponse> {
+    ): CommonResponse<ErrorInfoResponse> {
         log.error(e.message, e)
         return CommonResponse.schemaValidateErrorResponse(
-            listOf(ErrorField.fromInvalidFormat(e.name, e.value, e.requiredType)),
+            listOf(ErrorInfo.fromInvalidFormat(e.name, e.value, e.requiredType)),
         )
     }
 
@@ -81,16 +81,16 @@ class ApiCommonAdvice {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun handleHandlerMethodValidationException(
         e: HandlerMethodValidationException,
-    ): CommonResponse<ErrorFieldResponse> {
+    ): CommonResponse<ErrorInfoResponse> {
         log.error(e.message, e)
-        val errorFieldList = e.parameterValidationResults.flatMap { result ->
+        val errorInfoList = e.parameterValidationResults.flatMap { result ->
             val fieldName = result.methodParameter.parameterName
             val fieldValue = result.argument
             result.resolvableErrors.map { error ->
-                ErrorField.of(fieldName, fieldValue, error.defaultMessage)
+                ErrorInfo.of(fieldName, fieldValue, error.defaultMessage)
             }
         }
-        return CommonResponse.schemaValidateErrorResponse(errorFieldList)
+        return CommonResponse.schemaValidateErrorResponse(errorInfoList)
     }
 
     // 메서드 시큐리티(@PreAuthorize) 인가 실패 처리 (AuthorizationDeniedException 포함)

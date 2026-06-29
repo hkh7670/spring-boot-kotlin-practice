@@ -2,36 +2,36 @@ package com.example.springbootkotlinpractice.exception
 
 import org.springframework.validation.FieldError
 
-data class ErrorField(
+data class ErrorInfo(
     val fieldName: String?,   // 에러가 발생한 필드 명
     val fieldValue: Any?,     // 에러가 발생한 필드에 할당되어있는 값
     val message: String?,     // 에러 메시지
 ) {
     companion object {
-        fun from(fieldError: FieldError): ErrorField {
-            return ErrorField(
+        fun from(fieldError: FieldError): ErrorInfo {
+            return ErrorInfo(
                 fieldName = fieldError.field,
                 fieldValue = fieldError.rejectedValue,
                 message = resolveMessage(fieldError),
             )
         }
 
-        fun fromInvalidFormat(fieldName: String?, rejectedValue: Any?, targetType: Class<*>?): ErrorField {
+        fun fromInvalidFormat(fieldName: String?, rejectedValue: Any?, targetType: Class<*>?): ErrorInfo {
             val message = if (targetType != null) {
                 resolveTypeMessage(targetType)
             } else {
                 "데이터 형식이 올바르지 않습니다."
             }
 
-            return ErrorField(
+            return ErrorInfo(
                 fieldName = fieldName,
                 fieldValue = rejectedValue,
                 message = message,
             )
         }
 
-        fun of(fieldName: String?, fieldValue: Any?, message: String?): ErrorField {
-            return ErrorField(
+        fun of(fieldName: String?, fieldValue: Any?, message: String?): ErrorInfo {
+            return ErrorInfo(
                 fieldName = fieldName,
                 fieldValue = fieldValue,
                 message = message,
