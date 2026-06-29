@@ -2,13 +2,12 @@ package com.example.springbootkotlinpractice.exception
 
 import org.springframework.validation.FieldError
 
-data class ErrorField private constructor(
+data class ErrorField(
     val fieldName: String?,   // 에러가 발생한 필드 명
     val fieldValue: Any?,     // 에러가 발생한 필드에 할당되어있는 값
     val message: String?,     // 에러 메시지
 ) {
     companion object {
-
         fun from(fieldError: FieldError): ErrorField {
             return ErrorField(
                 fieldName = fieldError.field,

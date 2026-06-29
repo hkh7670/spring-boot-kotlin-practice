@@ -3,6 +3,7 @@ package com.example.springbootkotlinpractice.member.service
 import com.example.springbootkotlinpractice.common.security.JwtTokenProvider
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
+import com.example.springbootkotlinpractice.enums.Role
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import com.example.springbootkotlinpractice.member.dto.MemberCreateRequest
 import com.example.springbootkotlinpractice.member.dto.MemberTokenResponse
@@ -41,7 +42,7 @@ class MemberAuthService(
     // access + refresh 동시 발급
     fun issue(memberId: Long, joinProvider: JoinProvider): MemberTokenResponse {
         return MemberTokenResponse(
-            accessToken = jwtTokenProvider.createAccessToken(memberId, joinProvider),
+            accessToken = jwtTokenProvider.createAccessToken(memberId, joinProvider, Role.USER),
             refreshToken = jwtTokenProvider.createRefreshToken(memberId),
         )
     }
@@ -50,7 +51,7 @@ class MemberAuthService(
     @Transactional(readOnly = true)
     fun reissue(refreshToken: String): MemberTokenResponse {
         if (!jwtTokenProvider.isValid(refreshToken)) {
-            throw ApiErrorException(ResponseCodeEnum.INVALID_API_KEY)
+            throw ApiErrorException(ResponseCodeEnum.INVALID_JWT_TOKEN)
         }
         val memberId = jwtTokenProvider.getMemberId(refreshToken)
         val member = memberRepository.findByIdOrNull(memberId)

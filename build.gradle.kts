@@ -24,6 +24,8 @@ java {
     }
 }
 
+val querydslVersion = "7.4.0"
+
 repositories {
     mavenCentral()
 }
@@ -41,8 +43,8 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
 
     // OpenFeign QueryDSL 포크 (Jakarta / Spring Boot 3.x)
-    implementation("io.github.openfeign.querydsl:querydsl-jpa:7.4.0")
-    kapt("io.github.openfeign.querydsl:querydsl-apt:7.4.0:jakarta")
+    implementation("io.github.openfeign.querydsl:querydsl-jpa:$querydslVersion")
+    kapt("io.github.openfeign.querydsl:querydsl-apt:$querydslVersion:jakarta")
 
     runtimeOnly("com.h2database:h2")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -51,6 +53,10 @@ dependencies {
 
     /* Swagger */
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14")
+
+    /* Spring Security */
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    testImplementation("org.springframework.security:spring-security-test")
 }
 
 kotlin {

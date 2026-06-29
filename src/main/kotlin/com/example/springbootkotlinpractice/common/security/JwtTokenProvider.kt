@@ -2,6 +2,7 @@ package com.example.springbootkotlinpractice.common.security
 
 import com.example.springbootkotlinpractice.common.config.JwtProperties
 import com.example.springbootkotlinpractice.enums.JoinProvider
+import com.example.springbootkotlinpractice.enums.Role
 import com.example.springbootkotlinpractice.enums.TokenType
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
@@ -18,14 +19,15 @@ class JwtTokenProvider(
         jwtProperties.secret.toByteArray(StandardCharsets.UTF_8)
     )
 
-    fun createAccessToken(memberId: Long, joinProvider: JoinProvider): String {
+    fun createAccessToken(memberId: Long, joinProvider: JoinProvider, role: Role): String {
         return buildToken(
             memberId = memberId,
             validityMs = jwtProperties.accessTokenValidityMs,
             extraClaims = JwtTokenClaims.of(
                 id = memberId,
                 provider = joinProvider,
-                tokenType = TokenType.ACCESS_TOKEN
+                tokenType = TokenType.ACCESS_TOKEN,
+                role = role,
             ).toMap()
         )
     }
@@ -43,6 +45,10 @@ class JwtTokenProvider(
 
     fun getMemberId(token: String): Long {
         return parse(token).subject.toLong()
+    }
+
+    fun getRole(token: String): Role {
+        return Role.valueOf(parse(token)["role"].toString())
     }
 
     fun isValid(token: String): Boolean {

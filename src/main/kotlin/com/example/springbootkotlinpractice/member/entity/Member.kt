@@ -3,6 +3,7 @@ package com.example.springbootkotlinpractice.member.entity
 import com.example.springbootkotlinpractice.common.converter.Aes256Converter
 import com.example.springbootkotlinpractice.common.entity.BaseTimeEntity
 import com.example.springbootkotlinpractice.enums.JoinProvider
+import com.example.springbootkotlinpractice.enums.Role
 import jakarta.persistence.*
 import java.util.*
 
@@ -35,6 +36,10 @@ class Member(
     @Enumerated(EnumType.STRING)
     @Column(name = "join_provider", nullable = false, length = 20)
     val joinProvider: JoinProvider,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    val role: Role = Role.USER,
 ) : BaseTimeEntity() {
 
     @Id
