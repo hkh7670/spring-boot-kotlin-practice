@@ -12,16 +12,21 @@ class AesCryptoUtil(
     aesProperties: AesProperties
 ) {
     companion object {
-        private const val ALGORITHM = "AES/CBC/PKCS5Padding"
+        private const val AES_CIPHER_TRANSFORMATION = "AES/CBC/PKCS5Padding"
     }
 
-    private val keySpec = SecretKeySpec(Base64.getDecoder().decode(aesProperties.secret), "AES")
-    private val ivParameterSpec = IvParameterSpec(Base64.getDecoder().decode(aesProperties.initVector))
+    private val keySpec = SecretKeySpec(
+        Base64.getDecoder().decode(aesProperties.secret),
+        "AES"
+    )
+    private val ivParameterSpec = IvParameterSpec(
+        Base64.getDecoder().decode(aesProperties.initVector)
+    )
 
     fun encrypt(plainText: String?): String? {
         if (plainText.isNullOrEmpty()) return plainText
         return try {
-            val cipher = Cipher.getInstance(ALGORITHM)
+            val cipher = Cipher.getInstance(AES_CIPHER_TRANSFORMATION)
             cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivParameterSpec)
             Base64.getEncoder().encodeToString(cipher.doFinal(plainText.toByteArray()))
         } catch (e: Exception) {
@@ -32,7 +37,7 @@ class AesCryptoUtil(
     fun decrypt(cipherText: String?): String? {
         if (cipherText.isNullOrEmpty()) return cipherText
         return try {
-            val cipher = Cipher.getInstance(ALGORITHM)
+            val cipher = Cipher.getInstance(AES_CIPHER_TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, keySpec, ivParameterSpec)
             String(cipher.doFinal(Base64.getDecoder().decode(cipherText)))
         } catch (e: Exception) {

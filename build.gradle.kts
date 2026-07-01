@@ -57,6 +57,9 @@ dependencies {
     /* Spring Security */
     implementation("org.springframework.boot:spring-boot-starter-security")
     testImplementation("org.springframework.security:spring-security-test")
+
+    /* ULID Creator */
+    implementation("com.github.f4b6a3:ulid-creator:5.2.4")
 }
 
 kotlin {
