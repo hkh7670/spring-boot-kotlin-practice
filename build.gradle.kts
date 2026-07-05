@@ -15,9 +15,12 @@ allOpen {
 }
 
 group = "com.example"
-version = "0.0.1-SNAPSHOT"
+//version = "0.0.1-SNAPSHOT"
 description = "spring-boot-kotlin-practice"
 
+tasks.jar {
+    enabled = false
+}
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(25))

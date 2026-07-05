@@ -1,7 +1,7 @@
 spring:
   config:
     activate:
-      on-profile: local
+      on-profile: dev
   application:
     name: spring-boot-kotlin-practice
   datasource:
@@ -52,6 +52,6 @@ app:
   swagger:
     server-url: https://hkh7670.duckdns.org
   log:
-    dir: ./logs
+    dir: /home/ubuntu/api/logs
     level: INFO
-    max-history: 7
+    max-history: 30
