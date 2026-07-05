@@ -3,17 +3,17 @@
 
     <!--
       환경별 값은 application.yml 에서 읽어옴 (<springProperty>).
-      로그 파일 2종 분리:
-        - app.YYYY-MM-DD.log   : INFO 이상 전체 (INFO/WARN/ERROR)
-        - error.YYYY-MM-DD.log : ERROR 만
-      둘 다 prudent = blue/green 동시 쓰기 안전, temp 잔여 없음.
+      로그 파일 2종 분리 (파일명에 인스턴스명 포함 → 블루/그린 파일 충돌 없음):
+        - app_{blue|green}.log    : INFO 이상 전체 (INFO/WARN/ERROR), 롤오버 시 .gz 압축
+        - error_{blue|green}.log  : ERROR 만, 롤오버 시 .gz 압축
     -->
 
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <springProperty name="LOG_DIR"     source="app.log.dir"         defaultValue="/logs"/>
+    <springProperty name="LOG_DIR"      source="app.log.dir"         defaultValue="/logs"/>
     <springProperty name="LOG_LEVEL"   source="app.log.level"       defaultValue="INFO"/>
     <springProperty name="LOG_HISTORY" source="app.log.max-history" defaultValue="30"/>
+    <springProperty name="LOG_INSTANCE" source="log_instance"       defaultValue="app"/>
 
     <property name="LOG_PATTERN"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
@@ -28,9 +28,9 @@
 
     <!-- ===== 전체 로그 파일 (INFO 이상 전부) ===== -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <prudent>true</prudent>
+        <file>${LOG_DIR}/app_${LOG_INSTANCE}.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/info.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/app_${LOG_INSTANCE}.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
             <maxHistory>${LOG_HISTORY}</maxHistory>
             <totalSizeCap>3GB</totalSizeCap>
         </rollingPolicy>
@@ -42,7 +42,7 @@
 
     <!-- ===== 에러 전용 파일 (ERROR 만) ===== -->
     <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <prudent>true</prudent>
+        <file>${LOG_DIR}/error_${LOG_INSTANCE}.log</file>
         <!-- ERROR 레벨만 통과, 나머지(INFO/WARN 등)는 DENY -->
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
@@ -50,7 +50,7 @@
             <onMismatch>DENY</onMismatch>
         </filter>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/error.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/error_${LOG_INSTANCE}.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
             <maxHistory>${LOG_HISTORY}</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>
         </rollingPolicy>
