@@ -18,7 +18,7 @@ data class KakaoUserInfoResponse(
 )
 
 data class KakaoAccount(
-    val email: String,
+    val email: String?,
     val profile: KakaoProfile,
 )
 

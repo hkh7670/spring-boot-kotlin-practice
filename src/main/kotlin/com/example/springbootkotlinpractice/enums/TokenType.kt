@@ -5,4 +5,5 @@ enum class TokenType(
 ) {
     ACCESS_TOKEN("Access Token"),
     REFRESH_TOKEN("Refresh Token"),
+    TEMP_TOKEN("Temp Token"),
 }

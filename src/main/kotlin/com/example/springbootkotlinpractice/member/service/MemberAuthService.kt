@@ -8,6 +8,9 @@ import com.example.springbootkotlinpractice.enums.Role
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import com.example.springbootkotlinpractice.member.dto.MemberCreateRequest
 import com.example.springbootkotlinpractice.member.dto.MemberTokenResponse
+import com.example.springbootkotlinpractice.member.dto.OAuthLoginResponse
+import com.example.springbootkotlinpractice.member.dto.OAuthLoginStatus
+import com.example.springbootkotlinpractice.member.dto.OAuthSignUpRequest
 import com.example.springbootkotlinpractice.member.entity.Member
 import com.example.springbootkotlinpractice.member.repository.MemberRepository
 import org.springframework.data.repository.findByIdOrNull
@@ -23,9 +26,8 @@ class MemberAuthService(
 ) {
 
     // 가입경로에 맞춰 회원 생성 후 토큰 발급
-    @Transactional
     fun signUp(request: MemberCreateRequest, joinProvider: JoinProvider): MemberTokenResponse {
-        if (memberRepository.existsByEmail(request.email)) {
+        if (memberRepository.existsByEmailAndJoinProvider(request.email, joinProvider)) {
             throw ApiErrorException(ResponseCodeEnum.DUPLICATED_EMAIL)
         }
         val member = memberRepository.save(
@@ -41,11 +43,50 @@ class MemberAuthService(
         return issue(member.id, member.joinProvider)
     }
 
-    // OAuth Provider 토큰을 검증해 회원을 조회하고, 최초 로그인이면 자동 가입 후 토큰을 발급한다
-    fun oauthLogin(provider: JoinProvider, accessToken: String): MemberTokenResponse {
+    // OAuth Provider 토큰으로 기존 회원이면 JWT 발급, 신규 회원이면 tempToken 발급
+    fun oauthLogin(provider: JoinProvider, accessToken: String): OAuthLoginResponse {
         val userInfo = oAuthClientResolver.resolve(provider).getUserInfo(accessToken)
-        val member = memberRepository.findByEmail(userInfo.email)
-            ?: memberRepository.save(Member.ofOAuth(userInfo.email, userInfo.nickname, provider))
+        val member = memberRepository.findByProviderIdAndJoinProvider(userInfo.providerId, provider)
+
+        return if (member != null) {
+            val tokens = issue(member.id, member.joinProvider)
+            OAuthLoginResponse(
+                status = OAuthLoginStatus.LOGIN,
+                accessToken = tokens.accessToken,
+                refreshToken = tokens.refreshToken,
+            )
+        } else {
+            OAuthLoginResponse(
+                status = OAuthLoginStatus.NEED_SIGN_UP,
+                tempToken = jwtTokenProvider.createTempToken(
+                    providerId = userInfo.providerId,
+                    provider = provider,
+                    email = userInfo.email,
+                    nickname = userInfo.nickname,
+                ),
+            )
+        }
+    }
+
+    // tempToken + 추가 정보로 OAuth 회원가입 후 JWT 발급
+    fun oauthSignUp(request: OAuthSignUpRequest): MemberTokenResponse {
+        val claims = jwtTokenProvider.parseTempToken(request.tempToken)
+
+        if (memberRepository.findByProviderIdAndJoinProvider(claims.providerId, claims.provider) != null) {
+            throw ApiErrorException(ResponseCodeEnum.ALREADY_REGISTERED_OAUTH)
+        }
+
+        val member = memberRepository.save(
+            Member.ofOAuth(
+                providerId = claims.providerId,
+                email = claims.email,
+                lastName = request.lastName,
+                firstName = request.firstName,
+                age = request.age,
+                phoneNumber = request.phoneNumber,
+                joinProvider = claims.provider,
+            )
+        )
         return issue(member.id, member.joinProvider)
     }
 

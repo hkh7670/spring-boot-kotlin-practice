@@ -2,8 +2,10 @@ package com.example.springbootkotlinpractice.common.security
 
 import com.example.springbootkotlinpractice.common.config.JwtProperties
 import com.example.springbootkotlinpractice.enums.JoinProvider
+import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.enums.Role
 import com.example.springbootkotlinpractice.enums.TokenType
+import com.example.springbootkotlinpractice.exception.ApiErrorException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import org.springframework.stereotype.Component
@@ -41,6 +43,26 @@ class JwtTokenProvider(
                 tokenType = TokenType.REFRESH_TOKEN
             ).toMap()
         )
+    }
+
+    fun createTempToken(providerId: String, provider: JoinProvider, email: String?, nickname: String?): String {
+        val now = System.currentTimeMillis()
+        return Jwts.builder()
+            .subject(providerId)
+            .claims(TempTokenClaims.of(providerId, provider, email, nickname).toMap())
+            .issuedAt(Date(now))
+            .expiration(Date(now + jwtProperties.tempTokenValidityMs))
+            .signWith(key)
+            .compact()
+    }
+
+    fun parseTempToken(token: String): TempTokenClaims {
+        val claims = runCatching { parse(token) }
+            .getOrElse { throw ApiErrorException(ResponseCodeEnum.INVALID_TEMP_TOKEN) }
+        if (claims["tokenType"]?.toString() != TokenType.TEMP_TOKEN.name) {
+            throw ApiErrorException(ResponseCodeEnum.INVALID_TEMP_TOKEN)
+        }
+        return TempTokenClaims.from(claims)
     }
 
     fun getMemberId(token: String): Long {

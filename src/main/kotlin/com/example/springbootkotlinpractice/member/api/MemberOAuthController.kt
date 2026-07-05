@@ -5,6 +5,8 @@ import com.example.springbootkotlinpractice.common.dto.ResponseHandler
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.member.dto.MemberTokenResponse
 import com.example.springbootkotlinpractice.member.dto.OAuthLoginRequest
+import com.example.springbootkotlinpractice.member.dto.OAuthLoginResponse
+import com.example.springbootkotlinpractice.member.dto.OAuthSignUpRequest
 import com.example.springbootkotlinpractice.member.service.MemberAuthService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -20,8 +22,8 @@ class MemberOAuthController(
 ) {
     @PostMapping("/google")
     fun loginWithGoogle(
-        @RequestBody @Valid request: OAuthLoginRequest
-    ): ResponseEntity<CommonResponse<MemberTokenResponse>> {
+        @RequestBody @Valid request: OAuthLoginRequest,
+    ): ResponseEntity<CommonResponse<OAuthLoginResponse>> {
         return ResponseHandler.ok(
             memberAuthService.oauthLogin(JoinProvider.GOOGLE, request.accessToken)
         )
@@ -29,8 +31,8 @@ class MemberOAuthController(
 
     @PostMapping("/kakao")
     fun loginWithKakao(
-        @RequestBody @Valid request: OAuthLoginRequest
-    ): ResponseEntity<CommonResponse<MemberTokenResponse>> {
+        @RequestBody @Valid request: OAuthLoginRequest,
+    ): ResponseEntity<CommonResponse<OAuthLoginResponse>> {
         return ResponseHandler.ok(
             memberAuthService.oauthLogin(JoinProvider.KAKAO, request.accessToken)
         )
@@ -38,10 +40,19 @@ class MemberOAuthController(
 
     @PostMapping("/naver")
     fun loginWithNaver(
-        @RequestBody @Valid request: OAuthLoginRequest
-    ): ResponseEntity<CommonResponse<MemberTokenResponse>> {
+        @RequestBody @Valid request: OAuthLoginRequest,
+    ): ResponseEntity<CommonResponse<OAuthLoginResponse>> {
         return ResponseHandler.ok(
             memberAuthService.oauthLogin(JoinProvider.NAVER, request.accessToken)
+        )
+    }
+
+    @PostMapping("/sign-up")
+    fun oauthSignUp(
+        @RequestBody @Valid request: OAuthSignUpRequest,
+    ): ResponseEntity<CommonResponse<MemberTokenResponse>> {
+        return ResponseHandler.ok(
+            memberAuthService.oauthSignUp(request)
         )
     }
 }

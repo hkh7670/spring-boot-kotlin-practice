@@ -7,4 +7,5 @@ data class JwtProperties(
     val secret: String,
     val accessTokenValidityMs: Long,
     val refreshTokenValidityMs: Long,
+    val tempTokenValidityMs: Long,
 )

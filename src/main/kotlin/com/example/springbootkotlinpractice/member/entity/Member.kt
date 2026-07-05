@@ -8,11 +8,19 @@ import jakarta.persistence.*
 import java.util.*
 
 @Entity
-@Table(name = "member")
+@Table(
+    name = "member",
+    uniqueConstraints = [
+        UniqueConstraint(name = "uk_member_provider_id_join_provider", columnNames = ["provider_id", "join_provider"])
+    ]
+)
 class Member(
 
     @Column(name = "uuid", nullable = false, unique = true, updatable = false, length = 36)
     val uuid: String = UUID.randomUUID().toString(),
+
+    @Column(name = "provider_id", nullable = true, updatable = false, length = 100)
+    val providerId: String? = null,
 
     @Convert(converter = Aes256Converter::class)
     @Column(name = "last_name", nullable = false, length = 100)
@@ -30,8 +38,8 @@ class Member(
     var phoneNumber: String,
 
     @Convert(converter = Aes256Converter::class)
-    @Column(name = "email", nullable = false, unique = true, length = 100)
-    var email: String,
+    @Column(name = "email", nullable = true, length = 100)
+    var email: String? = null,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "join_provider", nullable = false, length = 20)
@@ -66,17 +74,21 @@ class Member(
             )
         }
 
-        // OAuth 최초 로그인 시 provider 가 제공하지 않는 나이/전화번호는 빈 값으로 채워 가입시킨다
         fun ofOAuth(
-            email: String,
-            nickname: String,
+            providerId: String,
+            email: String?,
+            lastName: String,
+            firstName: String,
+            age: Int,
+            phoneNumber: String,
             joinProvider: JoinProvider,
         ): Member {
             return Member(
-                lastName = "",
-                firstName = nickname,
-                age = 0,
-                phoneNumber = "",
+                providerId = providerId,
+                lastName = lastName,
+                firstName = firstName,
+                age = age,
+                phoneNumber = phoneNumber,
                 email = email,
                 joinProvider = joinProvider,
             )

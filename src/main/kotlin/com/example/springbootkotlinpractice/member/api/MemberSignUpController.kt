@@ -27,12 +27,4 @@ class MemberSignUpController(
         )
     }
 
-    @PostMapping("/google")
-    fun insertGoogleMember(
-        @RequestBody @Valid request: MemberCreateRequest
-    ): ResponseEntity<CommonResponse<MemberTokenResponse>> {
-        return ResponseHandler.created(
-            memberAuthService.signUp(request, JoinProvider.GOOGLE)
-        )
-    }
 }

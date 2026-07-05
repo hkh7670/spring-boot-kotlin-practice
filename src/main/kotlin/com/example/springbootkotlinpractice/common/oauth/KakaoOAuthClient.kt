@@ -14,10 +14,11 @@ class KakaoOAuthClient(
 
     override fun getUserInfo(accessToken: String): OAuthUserInfo {
         val response = fetchUserInfo(accessToken)
+        val account = response.kakaoAccount
         return OAuthUserInfo(
             providerId = response.id.toString(),
-            email = response.kakaoAccount.email,
-            nickname = response.kakaoAccount.profile.nickname,
+            email = account.email,
+            nickname = account.profile.nickname,
         )
     }
 

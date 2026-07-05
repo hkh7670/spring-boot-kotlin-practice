@@ -7,6 +7,6 @@ data class MemberResponse(
     val lastName: String,
     val age: Int?,
     val phoneNumber: String,
-    val email: String,
+    val email: String?,
 ) {
 }
