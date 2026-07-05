@@ -19,6 +19,7 @@ enum class ResponseCodeEnum(
     // Auth Error (4000 ~)
     INVALID_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "4000", "유효하지 않은 JWT Token 입니다."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "4001", "유효하지 않은 접근 입니다."),
+    INVALID_OAUTH_TOKEN(HttpStatus.UNAUTHORIZED, "4002", "유효하지 않은 OAuth 토큰 입니다."),
 
     // Client Error (8000 ~)
     SCHEMA_VALIDATE_ERROR(HttpStatus.BAD_REQUEST, "8000", "요청 필드에 대한 검증에 실패하였습니다."),

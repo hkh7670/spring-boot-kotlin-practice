@@ -30,6 +30,7 @@ class SecurityConfig(
         private val PERMIT_ALL_PATHS = arrayOf(
             "/server-health-check",
             "/api/v1/members/signup/**",
+            "/api/v1/members/oauth/**",
         )
     }
 

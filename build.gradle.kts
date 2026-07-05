@@ -63,6 +63,9 @@ dependencies {
 
     /* ULID Creator */
     implementation("com.github.f4b6a3:ulid-creator:5.2.4")
+
+    /* OAuth Provider 호출용 HTTP Client */
+    implementation("org.apache.httpcomponents.client5:httpclient5")
 }
 
 kotlin {

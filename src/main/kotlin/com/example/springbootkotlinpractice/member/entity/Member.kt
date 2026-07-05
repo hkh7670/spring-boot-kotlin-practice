@@ -65,5 +65,21 @@ class Member(
                 joinProvider = joinProvider,
             )
         }
+
+        // OAuth 최초 로그인 시 provider 가 제공하지 않는 나이/전화번호는 빈 값으로 채워 가입시킨다
+        fun ofOAuth(
+            email: String,
+            nickname: String,
+            joinProvider: JoinProvider,
+        ): Member {
+            return Member(
+                lastName = "",
+                firstName = nickname,
+                age = 0,
+                phoneNumber = "",
+                email = email,
+                joinProvider = joinProvider,
+            )
+        }
     }
 }
