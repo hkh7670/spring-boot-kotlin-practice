@@ -1,0 +1,32 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+jwt:
+  secret: Z9AeK9oKuYJMAEgZPkr99JYEkNZ15gYzpbSoVzV68d4
+  access-token-validity-ms: 1800000
+  refresh-token-validity-ms: 1209600000
+  temp-token-validity-ms: 600000
+
+aes:
+  secret: ahcxprF8G07ogIWhZ/Lp+VmEM7AvosI8rmhQunuKrkM=
+  init-vector: a1ze0V5ye2iz4fc7apFk/w==
+
+app:
+  log:
+    dir: ./logs
+    level: INFO
+    max-history: 7
