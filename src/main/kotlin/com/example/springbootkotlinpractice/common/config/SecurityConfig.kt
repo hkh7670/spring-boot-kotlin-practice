@@ -28,7 +28,8 @@ class SecurityConfig(
         )
 
         private val PERMIT_ALL_PATHS = arrayOf(
-            "/api/v1/members/signup/**"
+            "/api/v1/members/signup/**",
+            "/api/v1/members/oauth/**",
         )
     }
 

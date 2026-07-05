@@ -1,5 +1,6 @@
 package com.example.springbootkotlinpractice.member.service
 
+import com.example.springbootkotlinpractice.common.oauth.OAuthClientResolver
 import com.example.springbootkotlinpractice.common.security.JwtTokenProvider
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional
 class MemberAuthService(
     private val memberRepository: MemberRepository,
     private val jwtTokenProvider: JwtTokenProvider,
+    private val oAuthClientResolver: OAuthClientResolver,
 ) {
 
     // 가입경로에 맞춰 회원 생성 후 토큰 발급
@@ -36,6 +38,14 @@ class MemberAuthService(
                 joinProvider = joinProvider,
             )
         )
+        return issue(member.id, member.joinProvider)
+    }
+
+    // OAuth Provider 토큰을 검증해 회원을 조회하고, 최초 로그인이면 자동 가입 후 토큰을 발급한다
+    fun oauthLogin(provider: JoinProvider, accessToken: String): MemberTokenResponse {
+        val userInfo = oAuthClientResolver.resolve(provider).getUserInfo(accessToken)
+        val member = memberRepository.findByEmail(userInfo.email)
+            ?: memberRepository.save(Member.ofOAuth(userInfo.email, userInfo.nickname, provider))
         return issue(member.id, member.joinProvider)
     }
 
