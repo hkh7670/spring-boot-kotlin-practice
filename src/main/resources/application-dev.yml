@@ -49,6 +49,11 @@ aes:
   secret: ahcxprF8G07ogIWhZ/Lp+VmEM7AvosI8rmhQunuKrkM=
   init-vector: a1ze0V5ye2iz4fc7apFk/w==
 
+oauth:
+  google:
+    client-id: CHANGE_ME_GOOGLE_CLIENT_ID
+    client-secret: CHANGE_ME_GOOGLE_CLIENT_SECRET
+
 app:
   swagger:
     server-url: https://hkh7670.duckdns.org

@@ -1,5 +1,6 @@
 package com.example.springbootkotlinpractice.member.api
 
+import com.example.springbootkotlinpractice.common.oauth.GoogleOAuthClient
 import com.example.springbootkotlinpractice.common.oauth.OAuthClient
 import com.example.springbootkotlinpractice.common.oauth.OAuthClientResolver
 import com.example.springbootkotlinpractice.common.oauth.OAuthUserInfo
@@ -26,6 +27,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 
 private const val BASE_URL = "/api/v1/members/oauth"
 private const val FAKE_TOKEN = "fake-oauth-access-token"
+private const val FAKE_CODE = "fake-google-auth-code"
+private const val FAKE_CODE_VERIFIER = "fake-google-code-verifier"
+private const val FAKE_REDIRECT_URI = "com.example.app:/oauth2redirect"
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -45,6 +49,9 @@ class MemberOAuthControllerTest {
     @MockitoBean
     lateinit var oAuthClientResolver: OAuthClientResolver
 
+    @MockitoBean
+    lateinit var googleOAuthClient: GoogleOAuthClient
+
     @BeforeEach
     fun setUp() {
         memberRepository.deleteAll()
@@ -63,6 +70,21 @@ class MemberOAuthControllerTest {
         val result = mockMvc.post("$BASE_URL/$endpoint") {
             contentType = MediaType.APPLICATION_JSON
             content = """{"accessToken": "$FAKE_TOKEN"}"""
+        }.andReturn()
+        return result.response.contentAsString
+    }
+
+    private fun stubGoogleOAuthClient(userInfo: OAuthUserInfo) {
+        given(googleOAuthClient.getUserInfoByAuthorizationCode(FAKE_CODE, FAKE_CODE_VERIFIER, FAKE_REDIRECT_URI))
+            .willReturn(userInfo)
+    }
+
+    private fun googleOauthLogin(): String {
+        val result = mockMvc.post("$BASE_URL/google") {
+            contentType = MediaType.APPLICATION_JSON
+            content = """
+                {"code": "$FAKE_CODE", "codeVerifier": "$FAKE_CODE_VERIFIER", "redirectUri": "$FAKE_REDIRECT_URI"}
+            """.trimIndent()
         }.andReturn()
         return result.response.contentAsString
     }
@@ -100,7 +122,7 @@ class MemberOAuthControllerTest {
 
         @BeforeEach
         fun stubGoogle() {
-            stubOAuthClient(JoinProvider.GOOGLE, googleUser)
+            stubGoogleOAuthClient(googleUser)
         }
 
         @Test
@@ -108,7 +130,9 @@ class MemberOAuthControllerTest {
         fun `Google 신규 유저 로그인 시 NEED_SIGN_UP 상태와 tempToken을 반환한다`() {
             mockMvc.post("$BASE_URL/google") {
                 contentType = MediaType.APPLICATION_JSON
-                content = """{"accessToken": "$FAKE_TOKEN"}"""
+                content = """
+                    {"code": "$FAKE_CODE", "codeVerifier": "$FAKE_CODE_VERIFIER", "redirectUri": "$FAKE_REDIRECT_URI"}
+                """.trimIndent()
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.data.status") { value("NEED_SIGN_UP") }
@@ -121,7 +145,7 @@ class MemberOAuthControllerTest {
         @Test
         @DisplayName("신규 유저 - tempToken으로 회원가입 후 JWT 발급")
         fun `Google tempToken으로 회원가입 시 JWT 토큰을 반환하고 Member가 저장된다`() {
-            val tempToken = extractTempToken(oauthLogin("google"))
+            val tempToken = extractTempToken(googleOauthLogin())
 
             val signUpBody = signUp(tempToken)
             val tree = objectMapper.readTree(signUpBody)
@@ -138,12 +162,14 @@ class MemberOAuthControllerTest {
         @Test
         @DisplayName("기존 유저 - LOGIN + JWT 발급")
         fun `Google 기존 유저 로그인 시 LOGIN 상태와 JWT를 반환한다`() {
-            val tempToken = extractTempToken(oauthLogin("google"))
+            val tempToken = extractTempToken(googleOauthLogin())
             signUp(tempToken)
 
             mockMvc.post("$BASE_URL/google") {
                 contentType = MediaType.APPLICATION_JSON
-                content = """{"accessToken": "$FAKE_TOKEN"}"""
+                content = """
+                    {"code": "$FAKE_CODE", "codeVerifier": "$FAKE_CODE_VERIFIER", "redirectUri": "$FAKE_REDIRECT_URI"}
+                """.trimIndent()
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.data.status") { value("LOGIN") }
@@ -156,7 +182,7 @@ class MemberOAuthControllerTest {
         @Test
         @DisplayName("이미 가입된 providerId로 재가입 시도 - 에러 반환")
         fun `Google 중복 회원가입 시도 시 에러를 반환한다`() {
-            val tempToken = extractTempToken(oauthLogin("google"))
+            val tempToken = extractTempToken(googleOauthLogin())
             signUp(tempToken)
 
             mockMvc.post("$BASE_URL/sign-up") {
@@ -329,10 +355,21 @@ class MemberOAuthControllerTest {
 
         @Test
         @DisplayName("accessToken 빈 값으로 요청 시 - 유효성 검사 에러")
-        fun `accessToken 빈 값으로 Google 로그인 요청 시 유효성 검사 에러를 반환한다`() {
-            mockMvc.post("$BASE_URL/google") {
+        fun `accessToken 빈 값으로 Kakao 로그인 요청 시 유효성 검사 에러를 반환한다`() {
+            mockMvc.post("$BASE_URL/kakao") {
                 contentType = MediaType.APPLICATION_JSON
                 content = """{"accessToken": ""}"""
+            }.andExpect {
+                status { isBadRequest() }
+            }
+        }
+
+        @Test
+        @DisplayName("code/codeVerifier/redirectUri 빈 값으로 Google 로그인 요청 시 - 유효성 검사 에러")
+        fun `필수 필드가 빈 값이면 Google 로그인 요청 시 유효성 검사 에러를 반환한다`() {
+            mockMvc.post("$BASE_URL/google") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"code": "", "codeVerifier": "", "redirectUri": ""}"""
             }.andExpect {
                 status { isBadRequest() }
             }

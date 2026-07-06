@@ -1,6 +1,7 @@
 package com.example.springbootkotlinpractice.common.config
 
 import com.example.springbootkotlinpractice.common.oauth.GoogleOAuthApi
+import com.example.springbootkotlinpractice.common.oauth.GoogleTokenApi
 import com.example.springbootkotlinpractice.common.oauth.KakaoOAuthApi
 import com.example.springbootkotlinpractice.common.oauth.NaverOAuthApi
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
@@ -51,6 +52,12 @@ class OAuthRestClientConfig {
     @Bean
     fun googleOAuthApi(requestFactory: ClientHttpRequestFactory): GoogleOAuthApi {
         return createOAuthApi(requestFactory, "https://www.googleapis.com", GoogleOAuthApi::class.java)
+    }
+
+    // Authorization Code + PKCE 교환 전용 (userinfo 와 호스트가 다름)
+    @Bean
+    fun googleTokenApi(requestFactory: ClientHttpRequestFactory): GoogleTokenApi {
+        return createOAuthApi(requestFactory, "https://oauth2.googleapis.com", GoogleTokenApi::class.java)
     }
 
     @Bean

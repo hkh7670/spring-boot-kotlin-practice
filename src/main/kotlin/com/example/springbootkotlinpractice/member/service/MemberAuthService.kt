@@ -1,6 +1,8 @@
 package com.example.springbootkotlinpractice.member.service
 
+import com.example.springbootkotlinpractice.common.oauth.GoogleOAuthClient
 import com.example.springbootkotlinpractice.common.oauth.OAuthClientResolver
+import com.example.springbootkotlinpractice.common.oauth.OAuthUserInfo
 import com.example.springbootkotlinpractice.common.security.JwtTokenProvider
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
@@ -23,6 +25,7 @@ class MemberAuthService(
     private val memberRepository: MemberRepository,
     private val jwtTokenProvider: JwtTokenProvider,
     private val oAuthClientResolver: OAuthClientResolver,
+    private val googleOAuthClient: GoogleOAuthClient,
 ) {
 
     // 가입경로에 맞춰 회원 생성 후 토큰 발급
@@ -46,6 +49,16 @@ class MemberAuthService(
     // OAuth Provider 토큰으로 기존 회원이면 JWT 발급, 신규 회원이면 tempToken 발급
     fun oauthLogin(provider: JoinProvider, accessToken: String): OAuthLoginResponse {
         val userInfo = oAuthClientResolver.resolve(provider).getUserInfo(accessToken)
+        return buildOAuthLoginResponse(provider, userInfo)
+    }
+
+    // Authorization Code + PKCE 로 Google Access Token 교환 후 로그인/가입 분기 처리
+    fun oauthLoginWithGoogleCode(code: String, codeVerifier: String, redirectUri: String): OAuthLoginResponse {
+        val userInfo = googleOAuthClient.getUserInfoByAuthorizationCode(code, codeVerifier, redirectUri)
+        return buildOAuthLoginResponse(JoinProvider.GOOGLE, userInfo)
+    }
+
+    private fun buildOAuthLoginResponse(provider: JoinProvider, userInfo: OAuthUserInfo): OAuthLoginResponse {
         val member = memberRepository.findByProviderIdAndJoinProvider(userInfo.providerId, provider)
 
         return if (member != null) {
