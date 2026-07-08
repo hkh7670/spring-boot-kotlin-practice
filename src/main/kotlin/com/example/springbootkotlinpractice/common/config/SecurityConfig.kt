@@ -1,6 +1,7 @@
 package com.example.springbootkotlinpractice.common.config
 
 import com.example.springbootkotlinpractice.common.security.JwtAuthenticationFilter
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -18,6 +19,8 @@ class SecurityConfig(
     private val jwtAuthenticationFilter: JwtAuthenticationFilter,
     private val customAccessDeniedHandler: CustomAccessDeniedHandler,
     private val customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
+    @Value($$"${spring.h2.console.enabled:false}")
+    private val h2ConsoleEnabled: Boolean,
 ) {
     companion object {
         private val SWAGGER_PATHS = arrayOf(
@@ -46,8 +49,10 @@ class SecurityConfig(
             .authorizeHttpRequests {
                 // Swagger
                 it.requestMatchers(*SWAGGER_PATHS).permitAll()
-                // H2 Console
-                it.requestMatchers(PathRequest.toH2Console()).permitAll()
+                // H2 Console (h2-console 활성화된 프로파일에서만 매처 등록)
+                if (h2ConsoleEnabled) {
+                    it.requestMatchers(PathRequest.toH2Console()).permitAll()
+                }
                 // Permit All Paths
                 it.requestMatchers(*PERMIT_ALL_PATHS).permitAll()
                 it.requestMatchers("/api/v1/members/myself-admin").hasRole("ADMIN")

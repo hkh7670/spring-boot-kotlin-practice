@@ -2,20 +2,14 @@ spring:
   config:
     activate:
       on-profile: dev
-  application:
-    name: spring-boot-kotlin-practice
   datasource:
-    url: jdbc:h2:mem:practice;DB_CLOSE_DELAY=-1;MODE=MySQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: ${SPRING_DATASOURCE_URL}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
@@ -55,9 +49,10 @@ oauth:
     client-secret: CHANGE_ME_GOOGLE_CLIENT_SECRET
 
 app:
-  swagger:
-    server-url: https://hkh7670.duckdns.org
   log:
-    dir: /home/ubuntu/api/logs
+    dir: /Users/kyu/docker/spring-boot/logs
     level: INFO
     max-history: 30
+
+server:
+  forward-headers-strategy: framework

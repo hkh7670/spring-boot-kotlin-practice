@@ -10,10 +10,10 @@
 
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <springProperty name="LOG_DIR"      source="app.log.dir"         defaultValue="/logs"/>
-    <springProperty name="LOG_LEVEL"   source="app.log.level"       defaultValue="INFO"/>
+    <springProperty name="LOG_DIR" source="app.log.dir" defaultValue="/logs"/>
+    <springProperty name="LOG_LEVEL" source="app.log.level" defaultValue="INFO"/>
     <springProperty name="LOG_HISTORY" source="app.log.max-history" defaultValue="30"/>
-    <springProperty name="LOG_INSTANCE" source="log_instance"       defaultValue="app"/>
+    <springProperty name="LOG_INSTANCE" source="log_instance" defaultValue="app"/>
 
     <property name="LOG_PATTERN"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
