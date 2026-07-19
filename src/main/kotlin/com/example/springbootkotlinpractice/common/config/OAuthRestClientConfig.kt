@@ -1,9 +1,12 @@
 package com.example.springbootkotlinpractice.common.config
 
+import com.example.springbootkotlinpractice.common.Logging
 import com.example.springbootkotlinpractice.common.oauth.GoogleOAuthApi
 import com.example.springbootkotlinpractice.common.oauth.GoogleTokenApi
 import com.example.springbootkotlinpractice.common.oauth.KakaoOAuthApi
+import com.example.springbootkotlinpractice.common.oauth.KakaoTokenApi
 import com.example.springbootkotlinpractice.common.oauth.NaverOAuthApi
+import com.example.springbootkotlinpractice.common.oauth.NaverTokenApi
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import org.apache.hc.client5.http.config.ConnectionConfig
@@ -29,10 +32,9 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory
 import java.nio.charset.StandardCharsets
 
 @Configuration
-class OAuthRestClientConfig {
+class OAuthRestClientConfig: Logging {
 
     companion object {
-        private val log = LoggerFactory.getLogger(OAuthRestClientConfig::class.java)
 
         private const val MAX_TOTAL_CONNECTIONS = 100
         private const val MAX_PER_ROUTE = 20
@@ -65,9 +67,21 @@ class OAuthRestClientConfig {
         return createOAuthApi(requestFactory, "https://kapi.kakao.com", KakaoOAuthApi::class.java)
     }
 
+    // Authorization Code + PKCE 교환 전용 (userinfo 와 호스트가 다름)
+    @Bean
+    fun kakaoTokenApi(requestFactory: ClientHttpRequestFactory): KakaoTokenApi {
+        return createOAuthApi(requestFactory, "https://kauth.kakao.com", KakaoTokenApi::class.java)
+    }
+
     @Bean
     fun naverOAuthApi(requestFactory: ClientHttpRequestFactory): NaverOAuthApi {
         return createOAuthApi(requestFactory, "https://openapi.naver.com", NaverOAuthApi::class.java)
+    }
+
+    // Authorization Code + PKCE 교환 전용 (userinfo 와 호스트가 다름)
+    @Bean
+    fun naverTokenApi(requestFactory: ClientHttpRequestFactory): NaverTokenApi {
+        return createOAuthApi(requestFactory, "https://nid.naver.com", NaverTokenApi::class.java)
     }
 
     private fun <T> createOAuthApi(
@@ -105,9 +119,9 @@ class OAuthRestClientConfig {
 
     private fun logExternalError(request: HttpRequest, response: ClientHttpResponse) {
         val responseBody = response.body.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
-        log.error("[External Request] {} {}", request.method, request.uri)
-        log.error("[External Response] Status Code: {}", response.statusCode.value())
-        log.error("[External Response] Body: {}", responseBody)
+        logger.error("[External Request] {} {}", request.method, request.uri)
+        logger.error("[External Response] Status Code: {}", response.statusCode.value())
+        logger.error("[External Response] Body: {}", responseBody)
     }
 
     private fun createApacheHttpClient(): CloseableHttpClient {

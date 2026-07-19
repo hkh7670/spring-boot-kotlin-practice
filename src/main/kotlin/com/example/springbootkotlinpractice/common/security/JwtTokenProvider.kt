@@ -21,12 +21,13 @@ class JwtTokenProvider(
         jwtProperties.secret.toByteArray(StandardCharsets.UTF_8)
     )
 
-    fun createAccessToken(memberId: Long, joinProvider: JoinProvider, role: Role): String {
+    fun createAccessToken(memberId: Long, email: String?, joinProvider: JoinProvider, role: Role): String {
         return buildToken(
             memberId = memberId,
             validityMs = jwtProperties.accessTokenValidityMs,
             extraClaims = JwtTokenClaims.of(
-                id = memberId,
+                memberId = memberId,
+                email = email,
                 provider = joinProvider,
                 tokenType = TokenType.ACCESS_TOKEN,
                 role = role,

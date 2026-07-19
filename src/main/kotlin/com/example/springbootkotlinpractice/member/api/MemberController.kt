@@ -30,28 +30,30 @@ class MemberController(
                 uuid = member.uuid,
                 lastName = member.lastName,
                 firstName = member.firstName,
-                age = member.age,
+                birthDate = member.birthDate,
                 phoneNumber = member.phoneNumber,
                 email = member.email,
+                joinProvider = member.joinProvider
             )
         )
     }
 
-    @GetMapping("/myself-admin")
-    fun getMyselfAdmin(
-        @AuthenticationPrincipal userPrincipal: UserPrincipal,
-    ): ResponseEntity<CommonResponse<MemberResponse>> {
-        val member: Member = memberService.getMember(userPrincipal.id)
-        return ResponseHandler.ok(
-            MemberResponse(
-                id = member.id,
-                uuid = member.uuid,
-                lastName = member.lastName,
-                firstName = member.firstName,
-                age = member.age,
-                phoneNumber = member.phoneNumber,
-                email = member.email,
-            )
-        )
-    }
+//    @GetMapping("/myself-admin")
+//    fun getMyselfAdmin(
+//        @AuthenticationPrincipal userPrincipal: UserPrincipal,
+//    ): ResponseEntity<CommonResponse<MemberResponse>> {
+//        val member: Member = memberService.getMember(userPrincipal.id)
+//        return ResponseHandler.ok(
+//            MemberResponse(
+//                id = member.id,
+//                uuid = member.uuid,
+//                lastName = member.lastName,
+//                firstName = member.firstName,
+//                birthDate = member.birthDate,
+//                phoneNumber = member.phoneNumber,
+//                email = member.email,
+//                joinProvider = member.joinProvider
+//            )
+//        )
+//    }
 }

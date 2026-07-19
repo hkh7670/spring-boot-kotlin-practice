@@ -5,6 +5,7 @@ import com.example.springbootkotlinpractice.common.entity.BaseTimeEntity
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.Role
 import jakarta.persistence.*
+import java.time.LocalDate
 import java.util.*
 import org.hibernate.annotations.Comment
 
@@ -12,14 +13,16 @@ import org.hibernate.annotations.Comment
 @Table(
     name = "member",
     uniqueConstraints = [
-        UniqueConstraint(name = "uk_member_provider_id_join_provider", columnNames = ["provider_id", "join_provider"])
+        UniqueConstraint(name = "member_unique_1", columnNames = ["uuid"]),
+        UniqueConstraint(name = "member_unique_2", columnNames = ["provider_id", "join_provider"]),
+        UniqueConstraint(name = "member_unique_3", columnNames = ["email", "join_provider"]),
     ]
 )
 @Comment("회원 정보")
 class Member(
 
     @Comment("외부 노출용 UUID")
-    @Column(name = "uuid", nullable = false, unique = true, updatable = false, length = 36)
+    @Column(name = "uuid", nullable = false, updatable = false, length = 36)
     val uuid: String = UUID.randomUUID().toString(),
 
     @Comment("OAuth 제공자에서 발급한 사용자 ID")
@@ -36,9 +39,9 @@ class Member(
     @Column(name = "first_name", nullable = false, length = 100)
     var firstName: String,
 
-    @Comment("나이")
-    @Column(name = "age", nullable = false)
-    var age: Int,
+    @Comment("생년월일")
+    @Column(name = "birth_date", nullable = false)
+    var birthDate: LocalDate,
 
     @Comment("전화번호 (AES 암호화 저장)")
     @Convert(converter = Aes256Converter::class)
@@ -49,6 +52,10 @@ class Member(
     @Convert(converter = Aes256Converter::class)
     @Column(name = "email", nullable = true, length = 100)
     var email: String? = null,
+
+    @Comment("비밀번호 (BCrypt 해시, EMAIL 가입 회원만 보유)")
+    @Column(name = "password", nullable = true, length = 100)
+    var password: String? = null,
 
     @Comment("가입 경로 (일반/OAuth 제공자 구분)")
     @Enumerated(EnumType.STRING)
@@ -71,17 +78,19 @@ class Member(
         fun of(
             lastName: String,
             firstName: String,
-            age: Int,
+            birthDate: LocalDate,
             phoneNumber: String,
             email: String,
+            password: String,
             joinProvider: JoinProvider,
         ): Member {
             return Member(
                 lastName = lastName,
                 firstName = firstName,
-                age = age,
+                birthDate = birthDate,
                 phoneNumber = phoneNumber,
                 email = email,
+                password = password,
                 joinProvider = joinProvider,
             )
         }
@@ -91,7 +100,7 @@ class Member(
             email: String?,
             lastName: String,
             firstName: String,
-            age: Int,
+            birthDate: LocalDate,
             phoneNumber: String,
             joinProvider: JoinProvider,
         ): Member {
@@ -99,7 +108,7 @@ class Member(
                 providerId = providerId,
                 lastName = lastName,
                 firstName = firstName,
-                age = age,
+                birthDate = birthDate,
                 phoneNumber = phoneNumber,
                 email = email,
                 joinProvider = joinProvider,

@@ -1,6 +1,5 @@
 package com.example.springbootkotlinpractice.member.service
 
-import com.example.springbootkotlinpractice.common.oauth.GoogleOAuthClient
 import com.example.springbootkotlinpractice.common.oauth.OAuthClientResolver
 import com.example.springbootkotlinpractice.common.oauth.OAuthUserInfo
 import com.example.springbootkotlinpractice.common.security.JwtTokenProvider
@@ -8,14 +7,12 @@ import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.enums.Role
 import com.example.springbootkotlinpractice.exception.ApiErrorException
-import com.example.springbootkotlinpractice.member.dto.MemberCreateRequest
-import com.example.springbootkotlinpractice.member.dto.MemberTokenResponse
-import com.example.springbootkotlinpractice.member.dto.OAuthLoginResponse
-import com.example.springbootkotlinpractice.member.dto.OAuthLoginStatus
-import com.example.springbootkotlinpractice.member.dto.OAuthSignUpRequest
+import com.example.springbootkotlinpractice.member.dto.*
 import com.example.springbootkotlinpractice.member.entity.Member
+import com.example.springbootkotlinpractice.member.enums.OAuthLoginStatus
 import com.example.springbootkotlinpractice.member.repository.MemberRepository
 import org.springframework.data.repository.findByIdOrNull
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -25,7 +22,7 @@ class MemberAuthService(
     private val memberRepository: MemberRepository,
     private val jwtTokenProvider: JwtTokenProvider,
     private val oAuthClientResolver: OAuthClientResolver,
-    private val googleOAuthClient: GoogleOAuthClient,
+    private val passwordEncoder: PasswordEncoder,
 ) {
 
     // 가입경로에 맞춰 회원 생성 후 토큰 발급
@@ -37,32 +34,48 @@ class MemberAuthService(
             Member.of(
                 lastName = request.lastName,
                 firstName = request.firstName,
-                age = request.age,
+                birthDate = request.birthDate,
                 phoneNumber = request.phoneNumber,
                 email = request.email,
+                password = passwordEncoder.encode(request.password),
                 joinProvider = joinProvider,
             )
         )
-        return issue(member.id, member.joinProvider)
+        return issue(member.id, member.email, member.joinProvider)
     }
 
-    // OAuth Provider 토큰으로 기존 회원이면 JWT 발급, 신규 회원이면 tempToken 발급
-    fun oauthLogin(provider: JoinProvider, accessToken: String): OAuthLoginResponse {
-        val userInfo = oAuthClientResolver.resolve(provider).getUserInfo(accessToken)
+    // 이메일 + 비밀번호로 로그인 후 토큰 발급
+    @Transactional(readOnly = true)
+    fun login(request: MemberLoginRequest): MemberTokenResponse {
+        val member = memberRepository.findByEmailAndJoinProvider(request.email, JoinProvider.EMAIL)
+            ?: throw ApiErrorException(ResponseCodeEnum.INVALID_CREDENTIALS)
+
+        if (member.password == null || !passwordEncoder.matches(request.password, member.password)) {
+            throw ApiErrorException(ResponseCodeEnum.INVALID_CREDENTIALS)
+        }
+
+        return issue(member.id, member.email, member.joinProvider)
+    }
+
+    // Authorization Code + PKCE 로 Access Token 교환 후 로그인/가입 분기 처리
+    fun oauthLoginWithAuthorizationCode(
+        provider: JoinProvider,
+        code: String,
+        codeVerifier: String,
+        redirectUri: String,
+    ): OAuthLoginResponse {
+        val userInfo = oAuthClientResolver
+            .resolve(provider)
+            .getUserInfoByAuthorizationCode(code, codeVerifier, redirectUri)
+
         return buildOAuthLoginResponse(provider, userInfo)
-    }
-
-    // Authorization Code + PKCE 로 Google Access Token 교환 후 로그인/가입 분기 처리
-    fun oauthLoginWithGoogleCode(code: String, codeVerifier: String, redirectUri: String): OAuthLoginResponse {
-        val userInfo = googleOAuthClient.getUserInfoByAuthorizationCode(code, codeVerifier, redirectUri)
-        return buildOAuthLoginResponse(JoinProvider.GOOGLE, userInfo)
     }
 
     private fun buildOAuthLoginResponse(provider: JoinProvider, userInfo: OAuthUserInfo): OAuthLoginResponse {
         val member = memberRepository.findByProviderIdAndJoinProvider(userInfo.providerId, provider)
 
         return if (member != null) {
-            val tokens = issue(member.id, member.joinProvider)
+            val tokens = issue(member.id, member.email, member.joinProvider)
             OAuthLoginResponse(
                 status = OAuthLoginStatus.LOGIN,
                 accessToken = tokens.accessToken,
@@ -85,7 +98,7 @@ class MemberAuthService(
     fun oauthSignUp(request: OAuthSignUpRequest): MemberTokenResponse {
         val claims = jwtTokenProvider.parseTempToken(request.tempToken)
 
-        if (memberRepository.findByProviderIdAndJoinProvider(claims.providerId, claims.provider) != null) {
+        if (memberRepository.existsByProviderIdAndJoinProvider(claims.providerId, claims.provider)) {
             throw ApiErrorException(ResponseCodeEnum.ALREADY_REGISTERED_OAUTH)
         }
 
@@ -95,18 +108,23 @@ class MemberAuthService(
                 email = claims.email,
                 lastName = request.lastName,
                 firstName = request.firstName,
-                age = request.age,
+                birthDate = request.birthDate,
                 phoneNumber = request.phoneNumber,
                 joinProvider = claims.provider,
             )
         )
-        return issue(member.id, member.joinProvider)
+        return issue(member.id, member.email, member.joinProvider)
     }
 
     // access + refresh 동시 발급
-    fun issue(memberId: Long, joinProvider: JoinProvider): MemberTokenResponse {
+    fun issue(memberId: Long, email: String?, joinProvider: JoinProvider): MemberTokenResponse {
         return MemberTokenResponse(
-            accessToken = jwtTokenProvider.createAccessToken(memberId, joinProvider, Role.USER),
+            accessToken = jwtTokenProvider.createAccessToken(
+                memberId,
+                email,
+                joinProvider,
+                Role.USER
+            ),
             refreshToken = jwtTokenProvider.createRefreshToken(memberId),
         )
     }
@@ -120,6 +138,6 @@ class MemberAuthService(
         val memberId = jwtTokenProvider.getMemberId(refreshToken)
         val member = memberRepository.findByIdOrNull(memberId)
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_USER)
-        return issue(member.id, member.joinProvider)
+        return issue(member.id, member.email, member.joinProvider)
     }
 }

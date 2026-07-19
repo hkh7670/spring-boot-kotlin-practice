@@ -23,6 +23,7 @@ enum class ResponseCodeEnum(
     OAUTH_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "4003", "OAuth 이메일 제공에 동의해주세요."),
     INVALID_TEMP_TOKEN(HttpStatus.UNAUTHORIZED, "4004", "유효하지 않은 임시 토큰 입니다."),
     ALREADY_REGISTERED_OAUTH(HttpStatus.CONFLICT, "4005", "이미 가입된 OAuth 계정입니다."),
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "4006", "이메일 또는 비밀번호가 올바르지 않습니다."),
 
     // Client Error (8000 ~)
     SCHEMA_VALIDATE_ERROR(HttpStatus.BAD_REQUEST, "8000", "요청 필드에 대한 검증에 실패하였습니다."),

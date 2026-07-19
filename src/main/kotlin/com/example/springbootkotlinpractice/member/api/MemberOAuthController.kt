@@ -1,9 +1,13 @@
 package com.example.springbootkotlinpractice.member.api
 
+import com.example.springbootkotlinpractice.common.Logging
 import com.example.springbootkotlinpractice.common.dto.CommonResponse
 import com.example.springbootkotlinpractice.common.dto.ResponseHandler
 import com.example.springbootkotlinpractice.enums.JoinProvider
-import com.example.springbootkotlinpractice.member.dto.*
+import com.example.springbootkotlinpractice.member.dto.MemberTokenResponse
+import com.example.springbootkotlinpractice.member.dto.OAuthAuthorizationCodeLoginRequest
+import com.example.springbootkotlinpractice.member.dto.OAuthLoginResponse
+import com.example.springbootkotlinpractice.member.dto.OAuthSignUpRequest
 import com.example.springbootkotlinpractice.member.service.MemberAuthService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -16,12 +20,14 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
+
 @Tag(name = "Member OAuth", description = "OAuth 로그인 / 회원가입 API")
 @RequestMapping("/api/v1/members/oauth")
 @RestController
 class MemberOAuthController(
     private val memberAuthService: MemberAuthService,
-) {
+) : Logging {
+
     @Operation(
         summary = "Google 로그인",
         description = "Authorization Code + PKCE 로 Google Access Token 을 교환한 뒤, " +
@@ -35,10 +41,12 @@ class MemberOAuthController(
     )
     @PostMapping("/google")
     fun loginWithGoogle(
-        @RequestBody @Valid request: GoogleOAuthLoginRequest,
+        @RequestBody @Valid request: OAuthAuthorizationCodeLoginRequest,
     ): ResponseEntity<CommonResponse<OAuthLoginResponse>> {
+        logger.info("### [OAUTH] Google Login Request: $request")
         return ResponseHandler.ok(
-            memberAuthService.oauthLoginWithGoogleCode(
+            memberAuthService.oauthLoginWithAuthorizationCode(
+                JoinProvider.GOOGLE,
                 request.code,
                 request.codeVerifier,
                 request.redirectUri
@@ -48,41 +56,51 @@ class MemberOAuthController(
 
     @Operation(
         summary = "Kakao 로그인",
-        description = "클라이언트가 발급받은 Kakao Access Token 으로 로그인한다. " +
+        description = "Authorization Code + PKCE 로 Kakao Access Token 을 교환한 뒤, " +
                 "기존 회원이면 LOGIN 상태와 JWT를, 신규 회원이면 NEED_SIGN_UP 상태와 tempToken 을 반환한다.",
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "처리 성공 (LOGIN 또는 NEED_SIGN_UP)"),
-        ApiResponse(responseCode = "400", description = "accessToken 검증 실패"),
-        ApiResponse(responseCode = "401", description = "유효하지 않은 Kakao Access Token"),
+        ApiResponse(responseCode = "400", description = "code/codeVerifier/redirectUri 검증 실패"),
+        ApiResponse(responseCode = "401", description = "유효하지 않은 code 이거나 PKCE(code_verifier) 검증 실패"),
         ApiResponse(responseCode = "500", description = "Kakao API 호출 중 오류 발생"),
     )
     @PostMapping("/kakao")
     fun loginWithKakao(
-        @RequestBody @Valid request: OAuthLoginRequest,
+        @RequestBody @Valid request: OAuthAuthorizationCodeLoginRequest,
     ): ResponseEntity<CommonResponse<OAuthLoginResponse>> {
         return ResponseHandler.ok(
-            memberAuthService.oauthLogin(JoinProvider.KAKAO, request.accessToken)
+            memberAuthService.oauthLoginWithAuthorizationCode(
+                JoinProvider.KAKAO,
+                request.code,
+                request.codeVerifier,
+                request.redirectUri
+            )
         )
     }
 
     @Operation(
         summary = "Naver 로그인",
-        description = "클라이언트가 발급받은 Naver Access Token 으로 로그인한다. " +
+        description = "Authorization Code + PKCE 로 Naver Access Token 을 교환한 뒤, " +
                 "기존 회원이면 LOGIN 상태와 JWT를, 신규 회원이면 NEED_SIGN_UP 상태와 tempToken 을 반환한다.",
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "처리 성공 (LOGIN 또는 NEED_SIGN_UP)"),
-        ApiResponse(responseCode = "400", description = "accessToken 검증 실패"),
-        ApiResponse(responseCode = "401", description = "유효하지 않은 Naver Access Token"),
+        ApiResponse(responseCode = "400", description = "code/codeVerifier/redirectUri 검증 실패"),
+        ApiResponse(responseCode = "401", description = "유효하지 않은 code 이거나 PKCE(code_verifier) 검증 실패"),
         ApiResponse(responseCode = "500", description = "Naver API 호출 중 오류 발생"),
     )
     @PostMapping("/naver")
     fun loginWithNaver(
-        @RequestBody @Valid request: OAuthLoginRequest,
+        @RequestBody @Valid request: OAuthAuthorizationCodeLoginRequest,
     ): ResponseEntity<CommonResponse<OAuthLoginResponse>> {
         return ResponseHandler.ok(
-            memberAuthService.oauthLogin(JoinProvider.NAVER, request.accessToken)
+            memberAuthService.oauthLoginWithAuthorizationCode(
+                JoinProvider.NAVER,
+                request.code,
+                request.codeVerifier,
+                request.redirectUri
+            )
         )
     }
 

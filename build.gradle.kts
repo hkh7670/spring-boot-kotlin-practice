@@ -67,6 +67,9 @@ dependencies {
 
     /* OAuth Provider 호출용 HTTP Client */
     implementation("org.apache.httpcomponents.client5:httpclient5")
+
+    /* Kotlin Logging */
+//    runtimeOnly("io.github.oshai:kotlin-logging-jvm:8.0.4")
 }
 
 kotlin {

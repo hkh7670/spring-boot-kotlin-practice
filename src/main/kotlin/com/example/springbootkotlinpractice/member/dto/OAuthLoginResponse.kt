@@ -1,15 +1,11 @@
 package com.example.springbootkotlinpractice.member.dto
 
+import com.example.springbootkotlinpractice.member.enums.OAuthLoginStatus
 import io.swagger.v3.oas.annotations.media.Schema
 
-@Schema(description = "OAuth 로그인 처리 결과 상태 (LOGIN: 기존 회원 로그인 완료, NEED_SIGN_UP: 신규 회원, 회원가입 필요)")
-enum class OAuthLoginStatus {
-    LOGIN,
-    NEED_SIGN_UP,
-}
 
 data class OAuthLoginResponse(
-    @field:Schema(description = "로그인 처리 결과 상태")
+    @field:Schema(description = OAuthLoginStatus.API_DOCS_DESC)
     val status: OAuthLoginStatus,
 
     @field:Schema(

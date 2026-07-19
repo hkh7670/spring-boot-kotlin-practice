@@ -6,6 +6,7 @@ interface OAuthClient {
 
     val provider: JoinProvider
 
-    // 클라이언트가 발급받은 accessToken 을 provider 에 검증하여 사용자 정보를 조회한다
-    fun getUserInfo(accessToken: String): OAuthUserInfo
+    // Authorization Code + PKCE 로 Access Token 교환 후 사용자 정보 조회
+    // code_verifier 없이는 code 만으로 토큰 교환이 불가능해 탈취된 code 단독으로는 악용할 수 없다
+    fun getUserInfoByAuthorizationCode(code: String, codeVerifier: String, redirectUri: String): OAuthUserInfo
 }

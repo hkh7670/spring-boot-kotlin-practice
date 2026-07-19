@@ -1,10 +1,10 @@
 package com.example.springbootkotlinpractice.exception
 
+import com.example.springbootkotlinpractice.common.Logging
 import com.example.springbootkotlinpractice.common.dto.CommonResponse
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import com.fasterxml.jackson.databind.exc.MismatchedInputException
-import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -17,13 +17,11 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @RestControllerAdvice
-class ApiCommonAdvice {
-
-    private val log = LoggerFactory.getLogger(javaClass)
+class ApiCommonAdvice : Logging {
 
     @ExceptionHandler(ApiErrorException::class)
     fun <T> handleCustomBaseException(e: ApiErrorException): ResponseEntity<CommonResponse<T>> {
-        log.error(e.message, e)
+        logger.error(e.message, e)
         return ResponseEntity
             .status(e.responseCodeEnum.httpStatus)
             .body(CommonResponse.failResponse(e.responseCodeEnum))
@@ -35,7 +33,7 @@ class ApiCommonAdvice {
     fun handleMethodArgumentNotValidException(
         e: MethodArgumentNotValidException,
     ): CommonResponse<ErrorInfoResponse> {
-        log.error(e.message, e)
+        logger.error(e.message, e)
         val errorInfoList = e.bindingResult.fieldErrors.map { ErrorInfo.from(it) }
         return CommonResponse.schemaValidateErrorResponse(errorInfoList)
     }
@@ -44,7 +42,7 @@ class ApiCommonAdvice {
     @ExceptionHandler(HttpMessageNotReadableException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun handleHttpMessageNotReadableException(e: HttpMessageNotReadableException): CommonResponse<*> {
-        log.error(e.message, e)
+        logger.error(e.message, e)
 
         val cause = e.cause
         if (cause is MismatchedInputException && cause.path.isNotEmpty()) {
@@ -70,7 +68,7 @@ class ApiCommonAdvice {
     fun handleMethodArgumentTypeMismatchException(
         e: MethodArgumentTypeMismatchException,
     ): CommonResponse<ErrorInfoResponse> {
-        log.error(e.message, e)
+        logger.error(e.message, e)
         return CommonResponse.schemaValidateErrorResponse(
             listOf(ErrorInfo.fromInvalidFormat(e.name, e.value, e.requiredType)),
         )
@@ -82,7 +80,7 @@ class ApiCommonAdvice {
     fun handleHandlerMethodValidationException(
         e: HandlerMethodValidationException,
     ): CommonResponse<ErrorInfoResponse> {
-        log.error(e.message, e)
+        logger.error(e.message, e)
         val errorInfoList = e.parameterValidationResults.flatMap { result ->
             val fieldName = result.methodParameter.parameterName
             val fieldValue = result.argument
@@ -97,14 +95,14 @@ class ApiCommonAdvice {
     @ExceptionHandler(AccessDeniedException::class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     fun <T> handleAccessDeniedException(e: AccessDeniedException): CommonResponse<T> {
-        log.warn(e.message, e)
+        logger.warn(e.message, e)
         return CommonResponse.failResponse(ResponseCodeEnum.ACCESS_DENIED)
     }
 
     @ExceptionHandler(Exception::class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     fun <T> handleException(e: Exception): CommonResponse<T> {
-        log.error(e.message, e)
+        logger.error(e.message, e)
         return CommonResponse.internalServerErrorResponse()
     }
 }

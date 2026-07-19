@@ -9,8 +9,13 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.CorsConfigurationSource
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
@@ -32,15 +37,32 @@ class SecurityConfig(
 
         private val PERMIT_ALL_PATHS = arrayOf(
             "/server-health-check",
-            "/api/v1/members/signup/**",
+            "/api/v1/members/email/**",
             "/api/v1/members/oauth/**",
         )
+    }
+
+    @Bean
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
+
+    // 로컬 OAuth 테스트 프론트(oauth-test, http://localhost:8080)에서 fetch 호출을 허용하기 위한 CORS 설정
+    @Bean
+    fun corsConfigurationSource(): CorsConfigurationSource {
+        val configuration = CorsConfiguration().apply {
+            allowedOrigins = listOf("http://localhost:8080")
+            allowedMethods = listOf("GET", "POST")
+            allowedHeaders = listOf("Content-Type")
+        }
+        return UrlBasedCorsConfigurationSource().apply {
+            registerCorsConfiguration("/api/v1/members/oauth/**", configuration)
+        }
     }
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { it.disable() }
+            .cors { }
             .httpBasic { it.disable() }
             .formLogin { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
@@ -55,7 +77,7 @@ class SecurityConfig(
                 }
                 // Permit All Paths
                 it.requestMatchers(*PERMIT_ALL_PATHS).permitAll()
-                it.requestMatchers("/api/v1/members/myself-admin").hasRole("ADMIN")
+//                it.requestMatchers("/api/v1/members/myself-admin").hasRole("ADMIN")
                 // 그 외 전부 인증 필요
                 it.anyRequest().authenticated()
             }

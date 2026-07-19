@@ -5,15 +5,23 @@ import com.example.springbootkotlinpractice.enums.Role
 import com.example.springbootkotlinpractice.enums.TokenType
 
 data class JwtTokenClaims(
-    private val id: Long,
+    private val memberId: Long,
     private val tokenType: TokenType,
+    private val email: String? = null,
     private val provider: JoinProvider? = null,
     private val role: Role? = null,
 ) {
     companion object {
-        fun of(id: Long, tokenType: TokenType, provider: JoinProvider, role: Role): JwtTokenClaims {
+        fun of(
+            memberId: Long,
+            email: String?,
+            tokenType: TokenType,
+            provider: JoinProvider,
+            role: Role
+        ): JwtTokenClaims {
             return JwtTokenClaims(
-                id = id,
+                memberId = memberId,
+                email = email,
                 tokenType = tokenType,
                 provider = provider,
                 role = role,
@@ -22,7 +30,7 @@ data class JwtTokenClaims(
 
         fun of(id: Long, tokenType: TokenType): JwtTokenClaims {
             return JwtTokenClaims(
-                id = id,
+                memberId = id,
                 tokenType = tokenType,
             )
         }
@@ -30,8 +38,9 @@ data class JwtTokenClaims(
 
     fun toMap(): Map<String, Any> {
         return buildMap {
-            put("id", id)
+            put("id", memberId)
             put("tokenType", tokenType)
+            email?.let { put("email", it) }
             provider?.let { put("provider", it) }
             role?.let { put("role", it) }
         }

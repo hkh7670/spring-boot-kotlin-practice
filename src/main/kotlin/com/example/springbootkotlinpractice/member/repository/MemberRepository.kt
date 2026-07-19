@@ -13,6 +13,10 @@ interface MemberRepository : JpaRepository<Member, Long>, MemberRepositoryCustom
     fun findByEmail(email: String): Member?
     fun findByEmailAndJoinProvider(email: String, joinProvider: JoinProvider): Member?
     fun findByProviderIdAndJoinProvider(providerId: String, joinProvider: JoinProvider): Member?
+    fun existsByProviderIdAndJoinProvider(
+        providerId: String,
+        joinProvider: JoinProvider
+    ): Boolean
 
     fun existsByEmail(email: String): Boolean
 

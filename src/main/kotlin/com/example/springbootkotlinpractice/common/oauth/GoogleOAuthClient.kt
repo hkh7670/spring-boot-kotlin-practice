@@ -5,8 +5,6 @@ import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import org.springframework.stereotype.Component
-import org.springframework.util.LinkedMultiValueMap
-import org.springframework.util.MultiValueMap
 
 @Component
 class GoogleOAuthClient(
@@ -17,19 +15,13 @@ class GoogleOAuthClient(
 
     override val provider: JoinProvider = JoinProvider.GOOGLE
 
-    override fun getUserInfo(accessToken: String): OAuthUserInfo {
-        return toOAuthUserInfo(fetchUserInfo(accessToken))
-    }
-
-    // Authorization Code + PKCE 로 Access Token 교환 후 사용자 정보 조회
-    // code_verifier 없이는 code 만으로 토큰 교환이 불가능해 탈취된 code 단독으로는 악용할 수 없다
-    fun getUserInfoByAuthorizationCode(code: String, codeVerifier: String, redirectUri: String): OAuthUserInfo {
+    override fun getUserInfoByAuthorizationCode(code: String, codeVerifier: String, redirectUri: String): OAuthUserInfo {
         val tokenResponse = exchangeToken(code, codeVerifier, redirectUri)
         return toOAuthUserInfo(fetchUserInfo(tokenResponse.accessToken))
     }
 
     private fun exchangeToken(code: String, codeVerifier: String, redirectUri: String): GoogleTokenResponse {
-        return runCatching { googleTokenApi.exchangeToken(buildTokenRequestBody(code, codeVerifier, redirectUri)) }
+        return runCatching { googleTokenApi.exchangeToken(buildTokenRequest(code, codeVerifier, redirectUri).toFormData()) }
             .getOrElse {
                 if (it is ApiErrorException) {
                     throw it
@@ -38,19 +30,18 @@ class GoogleOAuthClient(
             }
     }
 
-    private fun buildTokenRequestBody(
+    private fun buildTokenRequest(
         code: String,
         codeVerifier: String,
         redirectUri: String,
-    ): MultiValueMap<String, String> {
-        return LinkedMultiValueMap<String, String>().apply {
-            add("grant_type", "authorization_code")
-            add("code", code)
-            add("code_verifier", codeVerifier)
-            add("redirect_uri", redirectUri)
-            add("client_id", googleOAuthProperties.clientId)
-            add("client_secret", googleOAuthProperties.clientSecret)
-        }
+    ): TokenRequest {
+        return TokenRequest(
+            code = code,
+            redirectUri = redirectUri,
+            clientId = googleOAuthProperties.clientId,
+            clientSecret = googleOAuthProperties.clientSecret,
+            codeVerifier = codeVerifier,
+        )
     }
 
     private fun fetchUserInfo(accessToken: String): GoogleUserInfoResponse {

@@ -4,6 +4,7 @@ import com.example.springbootkotlinpractice.common.dto.CommonResponse
 import com.example.springbootkotlinpractice.common.dto.ResponseHandler
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.member.dto.MemberCreateRequest
+import com.example.springbootkotlinpractice.member.dto.MemberLoginRequest
 import com.example.springbootkotlinpractice.member.dto.MemberTokenResponse
 import com.example.springbootkotlinpractice.member.service.MemberAuthService
 import jakarta.validation.Valid
@@ -13,17 +14,26 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
-@RequestMapping("/api/v1/members/signup")
+@RequestMapping("/api/v1/members/email")
 @RestController
-class MemberSignUpController(
+class MemberEmailSignUpController(
     private val memberAuthService: MemberAuthService,
 ) {
-    @PostMapping("/email")
+    @PostMapping("/sign-up")
     fun insertEmailMember(
         @RequestBody @Valid request: MemberCreateRequest
     ): ResponseEntity<CommonResponse<MemberTokenResponse>> {
         return ResponseHandler.created(
             memberAuthService.signUp(request, JoinProvider.EMAIL)
+        )
+    }
+
+    @PostMapping("/login")
+    fun login(
+        @RequestBody @Valid request: MemberLoginRequest
+    ): ResponseEntity<CommonResponse<MemberTokenResponse>> {
+        return ResponseHandler.ok(
+            memberAuthService.login(request)
         )
     }
 
