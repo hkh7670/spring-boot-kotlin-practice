@@ -74,6 +74,10 @@ class JwtTokenProvider(
         return Role.valueOf(parse(token)["role"].toString())
     }
 
+    fun getTokenType(token: String): TokenType {
+        return TokenType.valueOf(parse(token)["tokenType"].toString())
+    }
+
     fun isValid(token: String): Boolean {
         return runCatching { parse(token) }.isSuccess
     }

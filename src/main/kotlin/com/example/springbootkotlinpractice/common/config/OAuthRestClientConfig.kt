@@ -1,12 +1,12 @@
 package com.example.springbootkotlinpractice.common.config
 
 import com.example.springbootkotlinpractice.common.Logging
-import com.example.springbootkotlinpractice.common.oauth.GoogleOAuthApi
-import com.example.springbootkotlinpractice.common.oauth.GoogleTokenApi
-import com.example.springbootkotlinpractice.common.oauth.KakaoOAuthApi
-import com.example.springbootkotlinpractice.common.oauth.KakaoTokenApi
-import com.example.springbootkotlinpractice.common.oauth.NaverOAuthApi
-import com.example.springbootkotlinpractice.common.oauth.NaverTokenApi
+import com.example.springbootkotlinpractice.common.oauth.google.GoogleOAuthApi
+import com.example.springbootkotlinpractice.common.oauth.google.GoogleTokenApi
+import com.example.springbootkotlinpractice.common.oauth.kakao.KakaoOAuthApi
+import com.example.springbootkotlinpractice.common.oauth.kakao.KakaoTokenApi
+import com.example.springbootkotlinpractice.common.oauth.naver.NaverOAuthApi
+import com.example.springbootkotlinpractice.common.oauth.naver.NaverTokenApi
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import org.apache.hc.client5.http.config.ConnectionConfig
@@ -17,7 +17,6 @@ import org.apache.hc.client5.http.impl.classic.HttpClients
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager
 import org.apache.hc.core5.util.TimeValue
 import org.apache.hc.core5.util.Timeout
-import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpRequest

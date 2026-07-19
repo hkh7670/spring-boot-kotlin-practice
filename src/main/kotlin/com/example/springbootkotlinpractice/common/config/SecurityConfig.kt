@@ -37,9 +37,9 @@ class SecurityConfig(
 
         private val PERMIT_ALL_PATHS = arrayOf(
             "/server-health-check",
-            "/api/v1/members/email/**",
-            "/api/v1/members/oauth/**",
-            "/api/v1/members/reissue",
+            "/api/v1/auth/email/**",
+            "/api/v1/auth/oauth/**",
+            "/api/v1/auth/reissue",
         )
     }
 
