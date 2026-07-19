@@ -51,36 +51,36 @@ class OAuthRestClientConfig: Logging {
     }
 
     @Bean
-    fun googleOAuthApi(requestFactory: ClientHttpRequestFactory): GoogleOAuthApi {
-        return createOAuthApi(requestFactory, "https://www.googleapis.com", GoogleOAuthApi::class.java)
+    fun googleOAuthApi(oAuthClientHttpRequestFactory: ClientHttpRequestFactory): GoogleOAuthApi {
+        return createOAuthApi(oAuthClientHttpRequestFactory, "https://www.googleapis.com", GoogleOAuthApi::class.java)
     }
 
     // Authorization Code + PKCE 교환 전용 (userinfo 와 호스트가 다름)
     @Bean
-    fun googleTokenApi(requestFactory: ClientHttpRequestFactory): GoogleTokenApi {
-        return createOAuthApi(requestFactory, "https://oauth2.googleapis.com", GoogleTokenApi::class.java)
+    fun googleTokenApi(oAuthClientHttpRequestFactory: ClientHttpRequestFactory): GoogleTokenApi {
+        return createOAuthApi(oAuthClientHttpRequestFactory, "https://oauth2.googleapis.com", GoogleTokenApi::class.java)
     }
 
     @Bean
-    fun kakaoOAuthApi(requestFactory: ClientHttpRequestFactory): KakaoOAuthApi {
-        return createOAuthApi(requestFactory, "https://kapi.kakao.com", KakaoOAuthApi::class.java)
-    }
-
-    // Authorization Code + PKCE 교환 전용 (userinfo 와 호스트가 다름)
-    @Bean
-    fun kakaoTokenApi(requestFactory: ClientHttpRequestFactory): KakaoTokenApi {
-        return createOAuthApi(requestFactory, "https://kauth.kakao.com", KakaoTokenApi::class.java)
-    }
-
-    @Bean
-    fun naverOAuthApi(requestFactory: ClientHttpRequestFactory): NaverOAuthApi {
-        return createOAuthApi(requestFactory, "https://openapi.naver.com", NaverOAuthApi::class.java)
+    fun kakaoOAuthApi(oAuthClientHttpRequestFactory: ClientHttpRequestFactory): KakaoOAuthApi {
+        return createOAuthApi(oAuthClientHttpRequestFactory, "https://kapi.kakao.com", KakaoOAuthApi::class.java)
     }
 
     // Authorization Code + PKCE 교환 전용 (userinfo 와 호스트가 다름)
     @Bean
-    fun naverTokenApi(requestFactory: ClientHttpRequestFactory): NaverTokenApi {
-        return createOAuthApi(requestFactory, "https://nid.naver.com", NaverTokenApi::class.java)
+    fun kakaoTokenApi(oAuthClientHttpRequestFactory: ClientHttpRequestFactory): KakaoTokenApi {
+        return createOAuthApi(oAuthClientHttpRequestFactory, "https://kauth.kakao.com", KakaoTokenApi::class.java)
+    }
+
+    @Bean
+    fun naverOAuthApi(oAuthClientHttpRequestFactory: ClientHttpRequestFactory): NaverOAuthApi {
+        return createOAuthApi(oAuthClientHttpRequestFactory, "https://openapi.naver.com", NaverOAuthApi::class.java)
+    }
+
+    // Authorization Code + PKCE 교환 전용 (userinfo 와 호스트가 다름)
+    @Bean
+    fun naverTokenApi(oAuthClientHttpRequestFactory: ClientHttpRequestFactory): NaverTokenApi {
+        return createOAuthApi(oAuthClientHttpRequestFactory, "https://nid.naver.com", NaverTokenApi::class.java)
     }
 
     private fun <T> createOAuthApi(

@@ -1,13 +1,13 @@
 package com.example.springbootkotlinpractice.domain.auth.api
 
+import com.example.springbootkotlinpractice.common.Logging
+import com.example.springbootkotlinpractice.common.dto.CommonResponse
+import com.example.springbootkotlinpractice.common.dto.ResponseHandler
 import com.example.springbootkotlinpractice.domain.auth.dto.AuthTokenResponse
 import com.example.springbootkotlinpractice.domain.auth.dto.OAuthAuthorizationCodeLoginRequest
 import com.example.springbootkotlinpractice.domain.auth.dto.OAuthLoginResponse
 import com.example.springbootkotlinpractice.domain.auth.dto.OAuthSignUpRequest
 import com.example.springbootkotlinpractice.domain.auth.service.AuthService
-import com.example.springbootkotlinpractice.common.Logging
-import com.example.springbootkotlinpractice.common.dto.CommonResponse
-import com.example.springbootkotlinpractice.common.dto.ResponseHandler
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 
-@Tag(name = "Auth OAuth", description = "OAuth 로그인 / 회원가입 API")
+@Tag(name = "[OAuth] Auth", description = "OAuth 로그인 / 회원가입 API")
 @RequestMapping("/api/v1/auth/oauth")
 @RestController
 class AuthOAuthController(

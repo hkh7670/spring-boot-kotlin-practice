@@ -54,6 +54,10 @@ oauth:
     client-id: ${OAUTH_NAVER_CLIENT_ID:CHANGE_ME_NAVER_CLIENT_ID}
     client-secret: ${OAUTH_NAVER_CLIENT_SECRET:CHANGE_ME_NAVER_CLIENT_SECRET}
 
+toss:
+  payments:
+    secret-key: ${TOSS_PAYMENTS_SECRET_KEY:CHANGE_ME_TOSS_SECRET_KEY}
+
 redis:
   host: ${REDIS_URL}
   port: ${REDIS_PORT}

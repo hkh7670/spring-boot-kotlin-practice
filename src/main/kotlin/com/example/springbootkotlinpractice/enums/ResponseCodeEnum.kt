@@ -15,6 +15,14 @@ enum class ResponseCodeEnum(
     // Custom Response Code (1000 ~ )
     NOT_FOUND_USER(HttpStatus.NOT_FOUND, "1000", "회원정보가 존재하지 않습니다."),
     DUPLICATED_EMAIL(HttpStatus.CONFLICT, "1001", "이미 사용중인 이메일 입니다."),
+    NOT_FOUND_ORDER(HttpStatus.NOT_FOUND, "1002", "주문 정보가 존재하지 않습니다."),
+    NOT_FOUND_PRODUCT(HttpStatus.NOT_FOUND, "1003", "상품 정보가 존재하지 않습니다."),
+    NOT_FOUND_DELIVERY(HttpStatus.NOT_FOUND, "1004", "배송 정보가 존재하지 않습니다."),
+    NOT_ENOUGH_STOCK(HttpStatus.CONFLICT, "1005", "재고가 부족합니다."),
+    ALREADY_PAID_ORDER(HttpStatus.CONFLICT, "1006", "이미 결제가 완료된 주문입니다."),
+    PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "1007", "주문 금액과 결제 금액이 일치하지 않습니다."),
+    PAYMENT_CONFIRM_FAILED(HttpStatus.BAD_GATEWAY, "1008", "결제 승인에 실패했습니다."),
+    ORDER_ALREADY_CANCELLED(HttpStatus.CONFLICT, "1009", "이미 취소된 주문입니다."),
 
     // Auth Error (4000 ~)
     INVALID_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "4000", "유효하지 않은 JWT Token 입니다."),

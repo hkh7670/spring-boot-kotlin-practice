@@ -1,0 +1,73 @@
+package com.example.springbootkotlinpractice.domain.order.entity
+
+import com.example.springbootkotlinpractice.common.entity.BaseTimeEntity
+import com.example.springbootkotlinpractice.enums.OrderStatus
+import com.github.f4b6a3.ulid.UlidCreator
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
+import jakarta.persistence.Id
+import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
+import org.hibernate.annotations.Comment
+
+@Entity
+@Table(
+    name = "order_info",
+    uniqueConstraints = [
+        UniqueConstraint(name = "order_info_unique_1", columnNames = ["order_uid"]),
+    ]
+)
+@Comment("주문 정보")
+class OrderInfo(
+
+    @Comment("외부 노출용 주문 식별자 (ULID, Toss orderId)")
+    @Column(name = "order_uid", nullable = false, updatable = false, length = 26)
+    val orderUid: String = UlidCreator.getUlid().toString(),
+
+    @Comment("주문한 유저의 ID (member.id)")
+    @Column(name = "member_id", nullable = false, updatable = false)
+    val memberId: Long,
+
+    @Comment("상품 전체 가격")
+    @Column(name = "product_total_price", nullable = false)
+    var productTotalPrice: Int = 0,
+
+    @Comment("배송 정보 ID (delivery_info.id)")
+    @Column(name = "delivery_info_id", nullable = false, updatable = false)
+    val deliveryInfoId: Long,
+
+    @Comment("주문 상태")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    var status: OrderStatus = OrderStatus.PENDING_PAYMENT,
+) : BaseTimeEntity() {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    val id: Long = 0L
+
+    fun markPaid() {
+        check(status == OrderStatus.PENDING_PAYMENT) { "결제 대기 상태의 주문만 결제 완료 처리할 수 있습니다." }
+        status = OrderStatus.PAID
+    }
+
+    fun markCancelled() {
+        check(status == OrderStatus.PENDING_PAYMENT) { "결제 대기 상태의 주문만 취소할 수 있습니다." }
+        status = OrderStatus.CANCELLED
+    }
+
+    companion object {
+        fun of(memberId: Long, productTotalPrice: Int, deliveryInfoId: Long): OrderInfo {
+            return OrderInfo(
+                memberId = memberId,
+                productTotalPrice = productTotalPrice,
+                deliveryInfoId = deliveryInfoId,
+            )
+        }
+    }
+}
