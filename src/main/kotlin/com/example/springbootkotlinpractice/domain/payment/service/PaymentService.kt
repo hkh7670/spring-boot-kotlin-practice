@@ -3,37 +3,24 @@ package com.example.springbootkotlinpractice.domain.payment.service
 import com.example.springbootkotlinpractice.common.payment.toss.TossConfirmPaymentRequest
 import com.example.springbootkotlinpractice.common.payment.toss.TossConfirmPaymentResponse
 import com.example.springbootkotlinpractice.common.payment.toss.TossPaymentsApi
-import com.example.springbootkotlinpractice.domain.delivery.repository.DeliveryInfoRepository
 import com.example.springbootkotlinpractice.domain.order.entity.OrderInfo
-import com.example.springbootkotlinpractice.domain.order.repository.OrderDetailInfoRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderInfoRepository
 import com.example.springbootkotlinpractice.domain.payment.dto.PaymentConfirmRequest
 import com.example.springbootkotlinpractice.domain.payment.dto.PaymentConfirmResponse
-import com.example.springbootkotlinpractice.domain.payment.entity.PayInfo
-import com.example.springbootkotlinpractice.domain.payment.repository.PayInfoRepository
-import com.example.springbootkotlinpractice.domain.product.repository.ProductInfoRepository
 import com.example.springbootkotlinpractice.enums.OrderStatus
-import com.example.springbootkotlinpractice.enums.PaymentStatus
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
-import java.time.OffsetDateTime
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
+// Toss API 호출(외부 네트워크 요청)과 DB 쓰기(PaymentRecordService)를 분리한다.
+// 트랜잭션 안에서 외부 API를 호출하면 응답이 느릴 때 DB 커넥션을 그만큼 오래 붙잡게 되어 커넥션 풀 고갈 위험이 있다.
 @Service
 class PaymentService(
     private val orderInfoRepository: OrderInfoRepository,
-    private val orderDetailInfoRepository: OrderDetailInfoRepository,
-    private val payInfoRepository: PayInfoRepository,
-    private val deliveryInfoRepository: DeliveryInfoRepository,
-    private val productInfoRepository: ProductInfoRepository,
+    private val paymentRecordService: PaymentRecordService,
     private val tossPaymentsApi: TossPaymentsApi,
 ) {
 
-    // Toss 승인이 명확히 거절되면 주문을 취소하고 재고를 복구한 뒤 예외를 던진다.
-    // noRollbackFor 가 없으면 그 예외 때문에 취소/재고복구 변경사항까지 함께 롤백되어 버린다.
-    @Transactional(noRollbackFor = [ApiErrorException::class])
     fun confirmPayment(memberId: Long, request: PaymentConfirmRequest): PaymentConfirmResponse {
         val order = getOrder(request.orderId)
         validateOwner(order, memberId)
@@ -42,31 +29,10 @@ class PaymentService(
         val expectedAmount = calculateExpectedAmount(order)
         validateAmount(expectedAmount, request.amount)
 
-        val tossResponse = confirmToss(order, request)
+        val tossResponse = confirmToss(order.id, request)
         validateAmount(expectedAmount, tossResponse.totalAmount)
 
-        order.markPaid()
-        val payInfo = payInfoRepository.save(
-            PayInfo.of(
-                orderId = order.id,
-                paymentKey = tossResponse.paymentKey,
-                amount = tossResponse.totalAmount,
-                status = PaymentStatus.valueOf(tossResponse.status),
-                method = tossResponse.method,
-                approvedAt = tossResponse.approvedAt?.let { OffsetDateTime.parse(it).toLocalDateTime() },
-            )
-        )
-
-        return PaymentConfirmResponse(
-            payInfoId = payInfo.id,
-            orderId = order.id,
-            orderUid = order.orderUid,
-            paymentKey = payInfo.paymentKey,
-            amount = payInfo.amount,
-            status = payInfo.status,
-            method = payInfo.method,
-            approvedAt = payInfo.approvedAt,
-        )
+        return paymentRecordService.completePayment(order.id, tossResponse)
     }
 
     private fun getOrder(orderUid: String): OrderInfo {
@@ -89,9 +55,7 @@ class PaymentService(
     }
 
     private fun calculateExpectedAmount(order: OrderInfo): Int {
-        val deliveryInfo = deliveryInfoRepository.findByIdOrNull(order.deliveryInfoId)
-            ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_DELIVERY)
-        return order.productTotalPrice + deliveryInfo.price
+        return order.productTotalPrice + order.deliveryPrice
     }
 
     private fun validateAmount(expectedAmount: Int, actualAmount: Int) {
@@ -100,7 +64,9 @@ class PaymentService(
         }
     }
 
-    private fun confirmToss(order: OrderInfo, request: PaymentConfirmRequest): TossConfirmPaymentResponse {
+    // Toss 승인이 명확히 거절되면 주문을 취소하고 재고를 복구한 뒤 예외를 던진다.
+    // cancelOrderAndRestoreStock() 은 별도 빈의 독립된 트랜잭션이라, 이후 예외를 던져도 그 커밋은 영향받지 않는다.
+    private fun confirmToss(orderId: Long, request: PaymentConfirmRequest): TossConfirmPaymentResponse {
         return runCatching {
             tossPaymentsApi.confirmPayment(
                 TossConfirmPaymentRequest(
@@ -110,18 +76,11 @@ class PaymentService(
                 )
             )
         }.getOrElse {
-            cancelOrderAndRestoreStock(order)
+            paymentRecordService.cancelOrderAndRestoreStock(orderId)
             if (it is ApiErrorException) {
                 throw it
             }
             throw ApiErrorException(ResponseCodeEnum.PAYMENT_CONFIRM_FAILED)
-        }
-    }
-
-    private fun cancelOrderAndRestoreStock(order: OrderInfo) {
-        order.markCancelled()
-        orderDetailInfoRepository.findByOrderId(order.id).forEach {
-            productInfoRepository.increaseStock(it.productId, it.count)
         }
     }
 }

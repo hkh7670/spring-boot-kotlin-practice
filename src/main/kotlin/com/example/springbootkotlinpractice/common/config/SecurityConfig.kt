@@ -46,16 +46,16 @@ class SecurityConfig(
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
-    // 로컬 OAuth 테스트 프론트(oauth-test, http://localhost:8080)에서 fetch 호출을 허용하기 위한 CORS 설정
+    // 로컬 테스트 프론트(oauth-test, http://localhost:8080)에서 fetch 호출을 허용하기 위한 CORS 설정
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration().apply {
             allowedOrigins = listOf("http://localhost:8080")
             allowedMethods = listOf("GET", "POST")
-            allowedHeaders = listOf("Content-Type")
+            allowedHeaders = listOf("Content-Type", "Authorization")
         }
         return UrlBasedCorsConfigurationSource().apply {
-            registerCorsConfiguration("/api/v1/auth/oauth/**", configuration)
+            registerCorsConfiguration("/api/v1/**", configuration)
         }
     }
 

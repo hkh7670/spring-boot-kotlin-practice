@@ -118,6 +118,7 @@ class PaymentControllerTest {
                 memberId = member.id,
                 productTotalPrice = PRODUCT_TOTAL_PRICE,
                 deliveryInfoId = deliveryInfo.id,
+                deliveryPrice = DELIVERY_PRICE,
             )
         )
         orderDetailInfoRepository.save(

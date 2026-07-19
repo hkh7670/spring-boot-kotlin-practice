@@ -46,6 +46,7 @@ class OrderService(
                 memberId = memberId,
                 productTotalPrice = productTotalPrice,
                 deliveryInfoId = deliveryInfo.id,
+                deliveryPrice = deliveryInfo.price,
             )
         )
 
@@ -72,15 +73,14 @@ class OrderService(
     fun getOrder(memberId: Long, orderId: Long): OrderDetailResponse {
         val order = orderInfoRepository.findByIdAndMemberId(orderId, memberId)
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_ORDER)
-        val deliveryInfo = getDeliveryInfo(order.deliveryInfoId)
         val orderDetails = orderDetailInfoRepository.findByOrderId(order.id)
 
         return OrderDetailResponse(
             orderId = order.id,
             orderUid = order.orderUid,
             productTotalPrice = order.productTotalPrice,
-            deliveryPrice = deliveryInfo.price,
-            totalPrice = order.productTotalPrice + deliveryInfo.price,
+            deliveryPrice = order.deliveryPrice,
+            totalPrice = order.productTotalPrice + order.deliveryPrice,
             status = order.status,
             isPaid = order.status == OrderStatus.PAID,
             items = orderDetails.map {

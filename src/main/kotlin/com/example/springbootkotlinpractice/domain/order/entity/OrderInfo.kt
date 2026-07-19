@@ -3,15 +3,7 @@ package com.example.springbootkotlinpractice.domain.order.entity
 import com.example.springbootkotlinpractice.common.entity.BaseTimeEntity
 import com.example.springbootkotlinpractice.enums.OrderStatus
 import com.github.f4b6a3.ulid.UlidCreator
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.Table
-import jakarta.persistence.UniqueConstraint
+import jakarta.persistence.*
 import org.hibernate.annotations.Comment
 
 @Entity
@@ -40,6 +32,10 @@ class OrderInfo(
     @Column(name = "delivery_info_id", nullable = false, updatable = false)
     val deliveryInfoId: Long,
 
+    @Comment("주문 시점의 배송 가격 (delivery_info.price 는 이후 변경될 수 있어 스냅샷 저장)")
+    @Column(name = "delivery_price", nullable = false, updatable = false)
+    val deliveryPrice: Int = 0,
+
     @Comment("주문 상태")
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
@@ -62,11 +58,17 @@ class OrderInfo(
     }
 
     companion object {
-        fun of(memberId: Long, productTotalPrice: Int, deliveryInfoId: Long): OrderInfo {
+        fun of(
+            memberId: Long,
+            productTotalPrice: Int,
+            deliveryInfoId: Long,
+            deliveryPrice: Int
+        ): OrderInfo {
             return OrderInfo(
                 memberId = memberId,
                 productTotalPrice = productTotalPrice,
                 deliveryInfoId = deliveryInfoId,
+                deliveryPrice = deliveryPrice,
             )
         }
     }

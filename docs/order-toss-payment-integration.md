@@ -11,7 +11,7 @@
 
 ```
 1. POST /api/v1/orders
-   - 재고 검증 + 원자적 차감, order_info(status=PENDING_PAYMENT) + order_detail_info 생성
+   - 재고 검증 + 원자적 차감, order_info(status=****PENDING_PAYMENT) + order_detail_info 생성
    - 응답: orderId, orderUid, productTotalPrice, deliveryPrice, totalPrice
 
 2. (프론트) Toss 결제위젯 requestPayment(orderId=orderUid, amount=totalPrice)

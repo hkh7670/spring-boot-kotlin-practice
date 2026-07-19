@@ -57,6 +57,7 @@ CREATE TABLE order_info
     member_id           BIGINT                                NOT NULL COMMENT '주문한 유저의 ID (member.id)',
     product_total_price INT         DEFAULT 0                 NOT NULL COMMENT '상품 전체 가격',
     delivery_info_id    BIGINT                                NOT NULL COMMENT '배송 정보 ID (delivery_info.id)',
+    delivery_price      INT         DEFAULT 0                 NOT NULL COMMENT '주문 시점의 배송 가격 (delivery_info.price 는 이후 변경될 수 있어 스냅샷 저장)',
     status              VARCHAR(30) DEFAULT 'PENDING_PAYMENT' NOT NULL COMMENT '주문 상태 (PENDING_PAYMENT/PAID/CANCELLED)',
     created_datetime    DATETIME(6)   NOT NULL,
     updated_datetime    DATETIME(6)   NOT NULL,
@@ -97,3 +98,8 @@ CREATE TABLE pay_info
     CONSTRAINT pay_info_order_info_fk
         FOREIGN KEY (order_id) REFERENCES order_info (id)
 ) COMMENT '결제 정보';
+
+-- 기존 DB에 컬럼만 추가할 때 사용 (mysql/dev 프로파일은 ddl-auto: none 이라 수동 실행 필요)
+ALTER TABLE order_info
+    ADD COLUMN delivery_price INT DEFAULT 0 NOT NULL COMMENT '주문 시점의 배송 가격 (delivery_info.price 는 이후 변경될 수 있어 스냅샷 저장)'
+    AFTER delivery_info_id;
