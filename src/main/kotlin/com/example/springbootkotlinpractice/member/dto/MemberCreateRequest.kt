@@ -1,9 +1,6 @@
 package com.example.springbootkotlinpractice.member.dto
 
-import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.NotNull
-import jakarta.validation.constraints.Past
-import jakarta.validation.constraints.Size
+import jakarta.validation.constraints.*
 import java.time.LocalDate
 
 data class MemberCreateRequest(
@@ -21,11 +18,15 @@ data class MemberCreateRequest(
     val phoneNumber: String,
 
     @field:NotBlank
+    @field:Email
     val email: String,
 
     @field:NotBlank
     @field:Size(min = 8, max = 64)
     val password: String,
 ) {
+    fun validate() {
+
+    }
 
 }

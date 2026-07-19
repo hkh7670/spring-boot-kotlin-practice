@@ -2,6 +2,7 @@ package com.example.springbootkotlinpractice.common.security
 
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.TokenType
+import io.jsonwebtoken.Claims
 
 data class TempTokenClaims(
     val providerId: String,
@@ -24,7 +25,7 @@ data class TempTokenClaims(
             )
         }
 
-        fun from(claims: io.jsonwebtoken.Claims): TempTokenClaims {
+        fun from(claims: Claims): TempTokenClaims {
             return TempTokenClaims(
                 providerId = claims.subject,
                 provider = JoinProvider.valueOf(claims["provider"].toString()),

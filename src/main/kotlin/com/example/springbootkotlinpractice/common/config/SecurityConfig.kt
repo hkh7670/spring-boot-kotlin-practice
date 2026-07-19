@@ -39,6 +39,7 @@ class SecurityConfig(
             "/server-health-check",
             "/api/v1/members/email/**",
             "/api/v1/members/oauth/**",
+            "/api/v1/members/reissue",
         )
     }
 

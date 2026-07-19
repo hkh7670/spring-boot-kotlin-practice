@@ -1,7 +1,9 @@
 package com.example.springbootkotlinpractice.member.service
 
+import com.example.springbootkotlinpractice.common.config.JwtProperties
 import com.example.springbootkotlinpractice.common.oauth.OAuthClientResolver
 import com.example.springbootkotlinpractice.common.oauth.OAuthUserInfo
+import com.example.springbootkotlinpractice.common.redis.RedisRepository
 import com.example.springbootkotlinpractice.common.security.JwtTokenProvider
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
@@ -15,15 +17,21 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
 
 @Service
 @Transactional
 class MemberAuthService(
     private val memberRepository: MemberRepository,
     private val jwtTokenProvider: JwtTokenProvider,
+    private val jwtProperties: JwtProperties,
     private val oAuthClientResolver: OAuthClientResolver,
     private val passwordEncoder: PasswordEncoder,
+    private val redisRepository: RedisRepository,
 ) {
+    companion object {
+        private const val REFRESH_TOKEN_KEY_PREFIX = "refresh-token:"
+    }
 
     // 가입경로에 맞춰 회원 생성 후 토큰 발급
     fun signUp(request: MemberCreateRequest, joinProvider: JoinProvider): MemberTokenResponse {
@@ -116,8 +124,14 @@ class MemberAuthService(
         return issue(member.id, member.email, member.joinProvider)
     }
 
-    // access + refresh 동시 발급
+    // access + refresh 동시 발급. refreshToken은 Redis에 저장해 rotation의 기준값으로 사용한다
     fun issue(memberId: Long, email: String?, joinProvider: JoinProvider): MemberTokenResponse {
+        val refreshToken = jwtTokenProvider.createRefreshToken(memberId)
+        redisRepository.save(
+            REFRESH_TOKEN_KEY_PREFIX + memberId,
+            refreshToken,
+            Duration.ofMillis(jwtProperties.refreshTokenValidityMs),
+        )
         return MemberTokenResponse(
             accessToken = jwtTokenProvider.createAccessToken(
                 memberId,
@@ -125,17 +139,24 @@ class MemberAuthService(
                 joinProvider,
                 Role.USER
             ),
-            refreshToken = jwtTokenProvider.createRefreshToken(memberId),
+            refreshToken = refreshToken,
         )
     }
 
-    // refresh 토큰으로 재발급
+    // refresh 토큰으로 재발급 (rotation). Redis에 저장된 최신 토큰과 다르면 이미 폐기된 토큰의 재사용으로 간주해 세션을 강제 종료한다
     @Transactional(readOnly = true)
     fun reissue(refreshToken: String): MemberTokenResponse {
         if (!jwtTokenProvider.isValid(refreshToken)) {
             throw ApiErrorException(ResponseCodeEnum.INVALID_JWT_TOKEN)
         }
         val memberId = jwtTokenProvider.getMemberId(refreshToken)
+
+        val savedRefreshToken = redisRepository.find(REFRESH_TOKEN_KEY_PREFIX + memberId)
+        if (refreshToken != savedRefreshToken) {
+            redisRepository.delete(REFRESH_TOKEN_KEY_PREFIX + memberId)
+            throw ApiErrorException(ResponseCodeEnum.INVALID_JWT_TOKEN)
+        }
+
         val member = memberRepository.findByIdOrNull(memberId)
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_USER)
         return issue(member.id, member.email, member.joinProvider)

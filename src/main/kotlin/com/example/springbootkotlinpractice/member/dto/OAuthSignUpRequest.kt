@@ -11,11 +11,11 @@ data class OAuthSignUpRequest(
     @field:NotBlank
     val tempToken: String,
 
-    @field:Schema(description = "성", example = "한")
+    @field:Schema(description = "성", example = "홍")
     @field:NotBlank
     val lastName: String,
 
-    @field:Schema(description = "이름", example = "규호")
+    @field:Schema(description = "이름", example = "길동")
     @field:NotBlank
     val firstName: String,
 

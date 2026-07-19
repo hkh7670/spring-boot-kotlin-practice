@@ -36,6 +36,11 @@ oauth:
     client-id: test-naver-client-id
     client-secret: test-naver-client-secret
 
+redis:
+  host: localhost
+  port: 6379
+  password: test-redis-password
+
 app:
   log:
     dir: ./logs

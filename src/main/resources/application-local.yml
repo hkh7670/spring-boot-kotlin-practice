@@ -44,6 +44,11 @@ oauth:
     client-id: ${OAUTH_NAVER_CLIENT_ID:CHANGE_ME_NAVER_CLIENT_ID}
     client-secret: ${OAUTH_NAVER_CLIENT_SECRET:CHANGE_ME_NAVER_CLIENT_SECRET}
 
+redis:
+  host: ${REDIS_URL}
+  port: ${REDIS_PORT}
+  password: ${REDIS_PASSWORD}
+
 app:
   swagger:
     server-url: https://hkh7670.duckdns.org

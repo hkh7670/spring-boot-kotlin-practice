@@ -3,6 +3,7 @@ package com.example.springbootkotlinpractice.member.api
 import com.example.springbootkotlinpractice.common.oauth.OAuthClient
 import com.example.springbootkotlinpractice.common.oauth.OAuthClientResolver
 import com.example.springbootkotlinpractice.common.oauth.OAuthUserInfo
+import com.example.springbootkotlinpractice.common.redis.RedisRepository
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.member.dto.OAuthSignUpRequest
 import com.example.springbootkotlinpractice.member.repository.MemberRepository
@@ -47,6 +48,9 @@ class MemberOAuthControllerTest {
 
     @MockitoBean
     lateinit var oAuthClientResolver: OAuthClientResolver
+
+    @MockitoBean
+    lateinit var redisRepository: RedisRepository
 
     @BeforeEach
     fun setUp() {

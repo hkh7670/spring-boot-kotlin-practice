@@ -68,6 +68,9 @@ dependencies {
     /* OAuth Provider 호출용 HTTP Client */
     implementation("org.apache.httpcomponents.client5:httpclient5")
 
+    /* Redis */
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
     /* Kotlin Logging */
 //    runtimeOnly("io.github.oshai:kotlin-logging-jvm:8.0.4")
 }
