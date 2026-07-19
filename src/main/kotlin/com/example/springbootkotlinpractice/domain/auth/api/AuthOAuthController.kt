@@ -69,6 +69,7 @@ class AuthOAuthController(
     fun loginWithKakao(
         @RequestBody @Valid request: OAuthAuthorizationCodeLoginRequest,
     ): ResponseEntity<CommonResponse<OAuthLoginResponse>> {
+        logger.info("### [OAUTH] Kakao Login Request: $request")
         return ResponseHandler.ok(
             authService.oauthLoginWithAuthorizationCode(
                 JoinProvider.KAKAO,
@@ -94,6 +95,7 @@ class AuthOAuthController(
     fun loginWithNaver(
         @RequestBody @Valid request: OAuthAuthorizationCodeLoginRequest,
     ): ResponseEntity<CommonResponse<OAuthLoginResponse>> {
+        logger.info("### [OAUTH] Naver Login Request: $request")
         return ResponseHandler.ok(
             authService.oauthLoginWithAuthorizationCode(
                 JoinProvider.NAVER,

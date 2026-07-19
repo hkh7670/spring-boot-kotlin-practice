@@ -24,7 +24,10 @@ class AesCryptoUtil(
     )
 
     fun encrypt(plainText: String?): String? {
-        if (plainText.isNullOrEmpty()) return plainText
+        if (plainText.isNullOrEmpty()) {
+            return plainText
+        }
+
         return try {
             val cipher = Cipher.getInstance(AES_CIPHER_TRANSFORMATION)
             cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivParameterSpec)
@@ -35,7 +38,10 @@ class AesCryptoUtil(
     }
 
     fun decrypt(cipherText: String?): String? {
-        if (cipherText.isNullOrEmpty()) return cipherText
+        if (cipherText.isNullOrEmpty()) {
+            return cipherText
+        }
+
         return try {
             val cipher = Cipher.getInstance(AES_CIPHER_TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, keySpec, ivParameterSpec)

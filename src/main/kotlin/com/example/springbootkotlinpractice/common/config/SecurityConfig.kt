@@ -55,7 +55,7 @@ class SecurityConfig(
             allowedHeaders = listOf("Content-Type")
         }
         return UrlBasedCorsConfigurationSource().apply {
-            registerCorsConfiguration("/api/v1/members/oauth/**", configuration)
+            registerCorsConfiguration("/api/v1/auth/oauth/**", configuration)
         }
     }
 

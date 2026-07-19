@@ -21,9 +21,10 @@ description = "spring-boot-kotlin-practice"
 tasks.jar {
     enabled = false
 }
+
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(25))
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 

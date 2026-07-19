@@ -19,7 +19,11 @@ class NaverOAuthClient(
     override val provider: JoinProvider = JoinProvider.NAVER
 
     // 네이버 토큰 API는 PKCE(code_verifier)를 지원하지 않아 codeVerifier는 사용하지 않고 client_secret으로만 code 탈취를 방어한다
-    override fun getUserInfoByAuthorizationCode(code: String, codeVerifier: String, redirectUri: String): OAuthUserInfo {
+    override fun getUserInfoByAuthorizationCode(
+        code: String,
+        codeVerifier: String,
+        redirectUri: String
+    ): OAuthUserInfo {
         val tokenResponse = exchangeToken(code, redirectUri)
         val response = fetchUserInfo(tokenResponse.accessToken)
         val account = response.response
@@ -53,12 +57,13 @@ class NaverOAuthClient(
     }
 
     private fun fetchUserInfo(accessToken: String): NaverUserInfoResponse {
-        return runCatching { naverOAuthApi.getUserInfo("Bearer $accessToken") }
-            .getOrElse {
-                if (it is ApiErrorException) {
-                    throw it
-                }
-                throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        return runCatching {
+            naverOAuthApi.getUserInfo("Bearer $accessToken")
+        }.getOrElse {
+            if (it is ApiErrorException) {
+                throw it
             }
+            throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        }
     }
 }

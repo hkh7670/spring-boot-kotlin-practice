@@ -18,19 +18,30 @@ class GoogleOAuthClient(
 
     override val provider: JoinProvider = JoinProvider.GOOGLE
 
-    override fun getUserInfoByAuthorizationCode(code: String, codeVerifier: String, redirectUri: String): OAuthUserInfo {
+    override fun getUserInfoByAuthorizationCode(
+        code: String,
+        codeVerifier: String,
+        redirectUri: String
+    ): OAuthUserInfo {
         val tokenResponse = exchangeToken(code, codeVerifier, redirectUri)
         return toOAuthUserInfo(fetchUserInfo(tokenResponse.accessToken))
     }
 
     private fun exchangeToken(code: String, codeVerifier: String, redirectUri: String): GoogleTokenResponse {
-        return runCatching { googleTokenApi.exchangeToken(buildTokenRequest(code, codeVerifier, redirectUri).toFormData()) }
-            .getOrElse {
-                if (it is ApiErrorException) {
-                    throw it
-                }
-                throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        return runCatching {
+            googleTokenApi.exchangeToken(
+                buildTokenRequest(
+                    code,
+                    codeVerifier,
+                    redirectUri
+                ).toFormData()
+            )
+        }.getOrElse {
+            if (it is ApiErrorException) {
+                throw it
             }
+            throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        }
     }
 
     private fun buildTokenRequest(
@@ -48,13 +59,14 @@ class GoogleOAuthClient(
     }
 
     private fun fetchUserInfo(accessToken: String): GoogleUserInfoResponse {
-        return runCatching { googleOAuthApi.getUserInfo("Bearer $accessToken") }
-            .getOrElse {
-                if (it is ApiErrorException) {
-                    throw it
-                }
-                throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        return runCatching {
+            googleOAuthApi.getUserInfo("Bearer $accessToken")
+        }.getOrElse {
+            if (it is ApiErrorException) {
+                throw it
             }
+            throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        }
     }
 
     private fun toOAuthUserInfo(response: GoogleUserInfoResponse): OAuthUserInfo {
