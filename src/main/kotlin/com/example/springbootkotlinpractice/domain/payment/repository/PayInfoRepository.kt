@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository
 @Repository
 interface PayInfoRepository : JpaRepository<PayInfo, Long> {
 
-    fun existsByOrderId(orderId: Long): Boolean
+    fun existsByOrderInfoId(orderInfoId: Long): Boolean
 }

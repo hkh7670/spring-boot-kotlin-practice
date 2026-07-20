@@ -40,8 +40,8 @@ CREATE TABLE order_detail_info
 (
     id               BIGINT AUTO_INCREMENT
         PRIMARY KEY,
-    order_id         BIGINT        NOT NULL COMMENT '주문 ID (order_info.id)',
-    product_id       BIGINT        NOT NULL COMMENT '상품 ID (product.id)',
+    order_info_id    BIGINT        NOT NULL COMMENT '주문 ID (order_info.id)',
+    product_info_id  BIGINT        NOT NULL COMMENT '상품 ID (product_info.id)',
     price            BIGINT        NOT NULL COMMENT '주문 시점의 상품 가격',
     count            INT DEFAULT 1 NOT NULL COMMENT '주문 수량',
     created_datetime DATETIME(6)   NOT NULL,
@@ -66,6 +66,17 @@ CREATE TABLE order_info
 ) COMMENT '주문 정보';
 
 -- auto-generated definition
+CREATE TABLE order_status_history
+(
+    id               BIGINT AUTO_INCREMENT
+        PRIMARY KEY,
+    order_info_id    BIGINT      NOT NULL COMMENT '주문 ID (order_info.id)',
+    status           VARCHAR(30) NOT NULL COMMENT '변경된 주문 상태 (PENDING_PAYMENT/PAID/CANCELLED)',
+    created_datetime DATETIME(6) NOT NULL,
+    updated_datetime DATETIME(6) NOT NULL
+) COMMENT '주문 상태 변경 이력';
+
+-- auto-generated definition
 CREATE TABLE product_info
 (
     id               BIGINT AUTO_INCREMENT
@@ -83,7 +94,7 @@ CREATE TABLE pay_info
 (
     id               BIGINT AUTO_INCREMENT
         PRIMARY KEY COMMENT '결제 정보 고유 식별자',
-    order_id         BIGINT                             NOT NULL COMMENT '주문 ID (order_info.id)',
+    order_info_id    BIGINT                             NOT NULL COMMENT '주문 ID (order_info.id)',
     payment_key      VARCHAR(200)                       NOT NULL COMMENT 'Toss Payments 결제 고유 키',
     amount           INT                                NOT NULL COMMENT '결제 금액',
     status           VARCHAR(20)                        NOT NULL COMMENT '결제 상태 (READY/IN_PROGRESS/DONE/CANCELED/PARTIAL_CANCELED/ABORTED/EXPIRED)',
@@ -92,14 +103,40 @@ CREATE TABLE pay_info
     created_datetime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_datetime DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT pay_info_unique_1
-        UNIQUE (order_id),
+        UNIQUE (order_info_id),
     CONSTRAINT pay_info_unique_2
         UNIQUE (payment_key),
     CONSTRAINT pay_info_order_info_fk
-        FOREIGN KEY (order_id) REFERENCES order_info (id)
+        FOREIGN KEY (order_info_id) REFERENCES order_info (id)
 ) COMMENT '결제 정보';
 
 -- 기존 DB에 컬럼만 추가할 때 사용 (mysql/dev 프로파일은 ddl-auto: none 이라 수동 실행 필요)
 ALTER TABLE order_info
     ADD COLUMN delivery_price INT DEFAULT 0 NOT NULL COMMENT '주문 시점의 배송 가격 (delivery_info.price 는 이후 변경될 수 있어 스냅샷 저장)'
     AFTER delivery_info_id;
+
+-- 기존 DB에 주문 상태 이력 테이블을 추가할 때 사용 (mysql/dev 프로파일은 ddl-auto: none 이라 수동 실행 필요)
+CREATE TABLE order_status_history
+(
+    id               BIGINT AUTO_INCREMENT
+        PRIMARY KEY,
+    order_info_id    BIGINT      NOT NULL COMMENT '주문 ID (order_info.id)',
+    status           VARCHAR(30) NOT NULL COMMENT '변경된 주문 상태 (PENDING_PAYMENT/PAID/CANCELLED)',
+    created_datetime DATETIME(6) NOT NULL,
+    updated_datetime DATETIME(6) NOT NULL
+)
+    COMMENT '주문 상태 변경 이력';
+
+CREATE INDEX order_status_history_index_1
+    ON order_status_history (order_info_id);
+
+
+-- 기존 DB의 order_detail_info 컬럼명을 정정할 때 사용 (mysql/dev 프로파일은 ddl-auto: none 이라 수동 실행 필요)
+ALTER TABLE order_detail_info
+    RENAME COLUMN order_id TO order_info_id;
+ALTER TABLE order_detail_info
+    RENAME COLUMN product_id TO product_info_id;
+
+-- 기존 DB의 pay_info 컬럼명을 정정할 때 사용 (mysql/dev 프로파일은 ddl-auto: none 이라 수동 실행 필요)
+ALTER TABLE pay_info
+    RENAME COLUMN order_id TO order_info_id;

@@ -1,8 +1,10 @@
 package com.example.springbootkotlinpractice.domain.payment.service
 
 import com.example.springbootkotlinpractice.common.payment.toss.TossConfirmPaymentResponse
+import com.example.springbootkotlinpractice.domain.order.entity.OrderStatusHistory
 import com.example.springbootkotlinpractice.domain.order.repository.OrderDetailInfoRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderInfoRepository
+import com.example.springbootkotlinpractice.domain.order.repository.OrderStatusHistoryRepository
 import com.example.springbootkotlinpractice.domain.payment.dto.PaymentConfirmResponse
 import com.example.springbootkotlinpractice.domain.payment.entity.PayInfo
 import com.example.springbootkotlinpractice.domain.payment.repository.PayInfoRepository
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional
 class PaymentRecordService(
     private val orderInfoRepository: OrderInfoRepository,
     private val orderDetailInfoRepository: OrderDetailInfoRepository,
+    private val orderStatusHistoryRepository: OrderStatusHistoryRepository,
     private val payInfoRepository: PayInfoRepository,
     private val productInfoRepository: ProductInfoRepository,
 ) {
@@ -31,9 +34,11 @@ class PaymentRecordService(
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_ORDER)
 
         order.markPaid()
+        orderStatusHistoryRepository.save(OrderStatusHistory.of(order.id, order.status))
+
         val payInfo = payInfoRepository.save(
             PayInfo.of(
-                orderId = order.id,
+                orderInfoId = order.id,
                 paymentKey = tossResponse.paymentKey,
                 amount = tossResponse.totalAmount,
                 status = PaymentStatus.valueOf(tossResponse.status),
@@ -56,12 +61,14 @@ class PaymentRecordService(
 
     @Transactional
     fun cancelOrderAndRestoreStock(orderId: Long) {
-        val order = orderInfoRepository.findByIdOrNull(orderId)
+        val orderInfo = orderInfoRepository.findByIdOrNull(orderId)
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_ORDER)
 
-        order.markCancelled()
-        orderDetailInfoRepository.findByOrderId(order.id).forEach {
-            productInfoRepository.increaseStock(it.productId, it.count)
+        orderInfo.markCancelled()
+        orderStatusHistoryRepository.save(OrderStatusHistory.of(orderInfo.id, orderInfo.status))
+
+        orderDetailInfoRepository.findByOrderInfo(orderInfo).forEach {
+            productInfoRepository.increaseStock(it.productInfo.id, it.count)
         }
     }
 }

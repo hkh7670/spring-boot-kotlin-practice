@@ -121,7 +121,7 @@ class OrderControllerTest {
 
         val orders = orderInfoRepository.findAll()
         assertThat(orders).hasSize(1)
-        val orderDetails = orderDetailInfoRepository.findByOrderId(orders.first().id)
+        val orderDetails = orderDetailInfoRepository.findByOrderInfoId(orders.first().id)
         assertThat(orderDetails).hasSize(1)
         assertThat(orderDetails.first().count).isEqualTo(2)
     }
@@ -209,7 +209,7 @@ class OrderControllerTest {
         }.andExpect {
             status { isOk() }
             jsonPath("$.data.isPaid") { value(false) }
-            jsonPath("$.data.items.length()") { value(1) }
+            jsonPath("$.data.itemList.length()") { value(1) }
         }
     }
 }

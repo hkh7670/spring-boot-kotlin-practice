@@ -2,6 +2,8 @@ package com.example.springbootkotlinpractice.domain.order.entity
 
 import com.example.springbootkotlinpractice.common.entity.BaseTimeEntity
 import com.example.springbootkotlinpractice.enums.OrderStatus
+import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
+import com.example.springbootkotlinpractice.exception.ApiErrorException
 import com.github.f4b6a3.ulid.UlidCreator
 import jakarta.persistence.*
 import org.hibernate.annotations.Comment
@@ -48,13 +50,21 @@ class OrderInfo(
     val id: Long = 0L
 
     fun markPaid() {
-        check(status == OrderStatus.PENDING_PAYMENT) { "결제 대기 상태의 주문만 결제 완료 처리할 수 있습니다." }
+        validatePendingPayment()
         status = OrderStatus.PAID
     }
 
     fun markCancelled() {
-        check(status == OrderStatus.PENDING_PAYMENT) { "결제 대기 상태의 주문만 취소할 수 있습니다." }
+        validatePendingPayment()
         status = OrderStatus.CANCELLED
+    }
+
+    private fun validatePendingPayment() {
+        when (status) {
+            OrderStatus.PAID -> throw ApiErrorException(ResponseCodeEnum.ALREADY_PAID_ORDER)
+            OrderStatus.CANCELLED -> throw ApiErrorException(ResponseCodeEnum.ORDER_ALREADY_CANCELLED)
+            OrderStatus.PENDING_PAYMENT -> Unit
+        }
     }
 
     companion object {

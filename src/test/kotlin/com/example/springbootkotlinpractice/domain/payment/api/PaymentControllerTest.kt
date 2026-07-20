@@ -123,8 +123,8 @@ class PaymentControllerTest {
         )
         orderDetailInfoRepository.save(
             OrderDetailInfo.of(
-                orderId = order.id,
-                productId = product.id,
+                orderInfo = order,
+                productInfo = product,
                 price = PRODUCT_TOTAL_PRICE.toLong(),
                 count = ORDER_ITEM_COUNT,
             )
@@ -185,7 +185,7 @@ class PaymentControllerTest {
             status { isOk() }
         }
 
-        assertThat(payInfoRepository.existsByOrderId(order.id)).isTrue()
+        assertThat(payInfoRepository.existsByOrderInfoId(order.id)).isTrue()
         assertThat(orderInfoRepository.findById(order.id).get().status).isEqualTo(OrderStatus.PAID)
     }
 
@@ -200,7 +200,7 @@ class PaymentControllerTest {
             status { isBadRequest() }
         }
 
-        assertThat(payInfoRepository.existsByOrderId(order.id)).isFalse()
+        assertThat(payInfoRepository.existsByOrderInfoId(order.id)).isFalse()
         assertThat(orderInfoRepository.findById(order.id).get().status).isEqualTo(OrderStatus.PENDING_PAYMENT)
     }
 
@@ -275,7 +275,7 @@ class PaymentControllerTest {
         }.andReturn()
 
         assertThat(result.response.status).isEqualTo(502)
-        assertThat(payInfoRepository.existsByOrderId(order.id)).isFalse()
+        assertThat(payInfoRepository.existsByOrderInfoId(order.id)).isFalse()
         assertThat(orderInfoRepository.findById(order.id).get().status).isEqualTo(OrderStatus.CANCELLED)
         assertThat(productInfoRepository.findById(product.id).get().stockCount).isEqualTo(ORIGINAL_STOCK_COUNT)
     }

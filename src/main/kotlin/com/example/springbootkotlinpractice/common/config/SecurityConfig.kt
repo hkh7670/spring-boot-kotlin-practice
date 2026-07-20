@@ -46,11 +46,15 @@ class SecurityConfig(
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
-    // 로컬 테스트 프론트(oauth-test, http://localhost:8080)에서 fetch 호출을 허용하기 위한 CORS 설정
+    // 로컬 테스트 프론트(oauth-test, http://localhost:8080) 및 배포 도메인의 Swagger UI 에서
+    // fetch 호출을 허용하기 위한 CORS 설정
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration().apply {
-            allowedOrigins = listOf("http://localhost:8080")
+            allowedOrigins = listOf(
+                "http://localhost:8080",
+                "http://hkh7670.iptime.org:8080",
+            )
             allowedMethods = listOf("GET", "POST")
             allowedHeaders = listOf("Content-Type", "Authorization")
         }

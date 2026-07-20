@@ -10,11 +10,12 @@ data class OrderDetailResponse(
     val totalPrice: Int,
     val status: OrderStatus,
     val isPaid: Boolean,
-    val items: List<OrderItemResponse>,
+    val itemList: List<OrderItemResponse>,
 )
 
 data class OrderItemResponse(
     val productId: Long,
+    val productName: String,
     val price: Long,
     val count: Int,
 )

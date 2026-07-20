@@ -4,7 +4,7 @@ import com.example.springbootkotlinpractice.common.utils.AesCryptoUtil
 import jakarta.persistence.AttributeConverter
 import jakarta.persistence.Converter
 
-@Converter(autoApply = false)
+@Converter
 class Aes256Converter(
     private val aesCryptoUtil: AesCryptoUtil
 ) : AttributeConverter<String, String> {

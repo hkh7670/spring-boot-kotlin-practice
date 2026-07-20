@@ -24,14 +24,14 @@ springdoc:
   model-and-view-allowed: true
 
 jwt:
-  secret: Z9AeK9oKuYJMAEgZPkr99JYEkNZ15gYzpbSoVzV68d4
+  secret: ${JWT_SECRET}
   access-token-validity-ms: 1800000      # 30분
   refresh-token-validity-ms: 1209600000  # 14일
   temp-token-validity-ms: 600000         # 10분
 
 aes:
-  secret: ahcxprF8G07ogIWhZ/Lp+VmEM7AvosI8rmhQunuKrkM=
-  init-vector: a1ze0V5ye2iz4fc7apFk/w==
+  secret: ${AES_SECRET}
+  init-vector: ${AES_INIT_VECTOR}
 
 oauth:
   google:
