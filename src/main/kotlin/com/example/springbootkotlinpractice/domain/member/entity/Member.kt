@@ -11,11 +11,11 @@ import org.hibernate.annotations.Comment
 
 @Entity
 @Table(
-    name = "member",
+    name = "members",
     uniqueConstraints = [
-        UniqueConstraint(name = "member_unique_1", columnNames = ["uuid"]),
-        UniqueConstraint(name = "member_unique_2", columnNames = ["provider_id", "join_provider"]),
-        UniqueConstraint(name = "member_unique_3", columnNames = ["email", "join_provider"]),
+        UniqueConstraint(name = "uq_members_01", columnNames = ["uuid"]),
+        UniqueConstraint(name = "uq_members_02", columnNames = ["provider_id", "join_provider"]),
+        UniqueConstraint(name = "uq_members_03", columnNames = ["email", "join_provider"]),
     ]
 )
 @Comment("회원 정보")

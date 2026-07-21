@@ -4,18 +4,18 @@ import com.example.springbootkotlinpractice.common.payment.toss.TossConfirmPayme
 import com.example.springbootkotlinpractice.common.payment.toss.TossConfirmPaymentResponse
 import com.example.springbootkotlinpractice.common.payment.toss.TossPaymentsApi
 import com.example.springbootkotlinpractice.common.security.JwtTokenProvider
-import com.example.springbootkotlinpractice.domain.delivery.entity.DeliveryInfo
-import com.example.springbootkotlinpractice.domain.delivery.repository.DeliveryInfoRepository
+import com.example.springbootkotlinpractice.domain.delivery.entity.DeliveryOption
+import com.example.springbootkotlinpractice.domain.delivery.repository.DeliveryOptionRepository
 import com.example.springbootkotlinpractice.domain.member.entity.Member
 import com.example.springbootkotlinpractice.domain.member.repository.MemberRepository
-import com.example.springbootkotlinpractice.domain.order.entity.OrderDetailInfo
-import com.example.springbootkotlinpractice.domain.order.entity.OrderInfo
-import com.example.springbootkotlinpractice.domain.order.repository.OrderDetailInfoRepository
-import com.example.springbootkotlinpractice.domain.order.repository.OrderInfoRepository
+import com.example.springbootkotlinpractice.domain.order.entity.Order
+import com.example.springbootkotlinpractice.domain.order.entity.OrderItem
+import com.example.springbootkotlinpractice.domain.order.repository.OrderItemRepository
+import com.example.springbootkotlinpractice.domain.order.repository.OrderRepository
 import com.example.springbootkotlinpractice.domain.payment.dto.PaymentConfirmRequest
-import com.example.springbootkotlinpractice.domain.payment.repository.PayInfoRepository
-import com.example.springbootkotlinpractice.domain.product.entity.ProductInfo
-import com.example.springbootkotlinpractice.domain.product.repository.ProductInfoRepository
+import com.example.springbootkotlinpractice.domain.payment.repository.PaymentRepository
+import com.example.springbootkotlinpractice.domain.product.entity.Product
+import com.example.springbootkotlinpractice.domain.product.repository.ProductRepository
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.OrderStatus
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
@@ -61,19 +61,19 @@ class PaymentControllerTest {
     lateinit var memberRepository: MemberRepository
 
     @Autowired
-    lateinit var deliveryInfoRepository: DeliveryInfoRepository
+    lateinit var deliveryOptionRepository: DeliveryOptionRepository
 
     @Autowired
-    lateinit var productInfoRepository: ProductInfoRepository
+    lateinit var productRepository: ProductRepository
 
     @Autowired
-    lateinit var orderInfoRepository: OrderInfoRepository
+    lateinit var orderRepository: OrderRepository
 
     @Autowired
-    lateinit var orderDetailInfoRepository: OrderDetailInfoRepository
+    lateinit var orderItemRepository: OrderItemRepository
 
     @Autowired
-    lateinit var payInfoRepository: PayInfoRepository
+    lateinit var paymentRepository: PaymentRepository
 
     @Autowired
     lateinit var jwtTokenProvider: JwtTokenProvider
@@ -83,16 +83,16 @@ class PaymentControllerTest {
 
     private lateinit var member: Member
     private lateinit var accessToken: String
-    private lateinit var product: ProductInfo
-    private lateinit var order: OrderInfo
+    private lateinit var product: Product
+    private lateinit var order: Order
 
     @BeforeEach
     fun setUp() {
-        orderDetailInfoRepository.deleteAll()
-        payInfoRepository.deleteAll()
-        orderInfoRepository.deleteAll()
-        productInfoRepository.deleteAll()
-        deliveryInfoRepository.deleteAll()
+        orderItemRepository.deleteAll()
+        paymentRepository.deleteAll()
+        orderRepository.deleteAll()
+        productRepository.deleteAll()
+        deliveryOptionRepository.deleteAll()
         memberRepository.deleteAll()
 
         member = memberRepository.save(
@@ -108,23 +108,23 @@ class PaymentControllerTest {
         )
         accessToken = jwtTokenProvider.createAccessToken(member.id, member.email, member.joinProvider, member.role)
 
-        val deliveryInfo = deliveryInfoRepository.save(DeliveryInfo(name = "기본 배송", price = DELIVERY_PRICE))
+        val deliveryOption = deliveryOptionRepository.save(DeliveryOption(name = "기본 배송", price = DELIVERY_PRICE))
         // 재고 3개 중 1개가 이 주문 생성 시점에 이미 차감된 상태(2개 남음)를 흉내낸다.
-        product = productInfoRepository.save(
-            ProductInfo(name = "테스트 상품", price = PRODUCT_TOTAL_PRICE, stockCount = ORIGINAL_STOCK_COUNT - ORDER_ITEM_COUNT)
+        product = productRepository.save(
+            Product(name = "테스트 상품", price = PRODUCT_TOTAL_PRICE, stockCount = ORIGINAL_STOCK_COUNT - ORDER_ITEM_COUNT)
         )
-        order = orderInfoRepository.save(
-            OrderInfo.of(
+        order = orderRepository.save(
+            Order.of(
                 memberId = member.id,
                 productTotalPrice = PRODUCT_TOTAL_PRICE,
-                deliveryInfoId = deliveryInfo.id,
+                deliveryOptionId = deliveryOption.id,
                 deliveryPrice = DELIVERY_PRICE,
             )
         )
-        orderDetailInfoRepository.save(
-            OrderDetailInfo.of(
-                orderInfo = order,
-                productInfo = product,
+        orderItemRepository.save(
+            OrderItem.of(
+                order = order,
+                product = product,
                 price = PRODUCT_TOTAL_PRICE.toLong(),
                 count = ORDER_ITEM_COUNT,
             )
@@ -185,8 +185,8 @@ class PaymentControllerTest {
             status { isOk() }
         }
 
-        assertThat(payInfoRepository.existsByOrderInfoId(order.id)).isTrue()
-        assertThat(orderInfoRepository.findById(order.id).get().status).isEqualTo(OrderStatus.PAID)
+        assertThat(paymentRepository.existsByOrderId(order.id)).isTrue()
+        assertThat(orderRepository.findById(order.id).get().status).isEqualTo(OrderStatus.PAID)
     }
 
     @Test
@@ -200,8 +200,8 @@ class PaymentControllerTest {
             status { isBadRequest() }
         }
 
-        assertThat(payInfoRepository.existsByOrderInfoId(order.id)).isFalse()
-        assertThat(orderInfoRepository.findById(order.id).get().status).isEqualTo(OrderStatus.PENDING_PAYMENT)
+        assertThat(paymentRepository.existsByOrderId(order.id)).isFalse()
+        assertThat(orderRepository.findById(order.id).get().status).isEqualTo(OrderStatus.PENDING_PAYMENT)
     }
 
     @Test
@@ -275,9 +275,9 @@ class PaymentControllerTest {
         }.andReturn()
 
         assertThat(result.response.status).isEqualTo(502)
-        assertThat(payInfoRepository.existsByOrderInfoId(order.id)).isFalse()
-        assertThat(orderInfoRepository.findById(order.id).get().status).isEqualTo(OrderStatus.CANCELLED)
-        assertThat(productInfoRepository.findById(product.id).get().stockCount).isEqualTo(ORIGINAL_STOCK_COUNT)
+        assertThat(paymentRepository.existsByOrderId(order.id)).isFalse()
+        assertThat(orderRepository.findById(order.id).get().status).isEqualTo(OrderStatus.CANCELLED)
+        assertThat(productRepository.findById(product.id).get().stockCount).isEqualTo(ORIGINAL_STOCK_COUNT)
     }
 
     @Test

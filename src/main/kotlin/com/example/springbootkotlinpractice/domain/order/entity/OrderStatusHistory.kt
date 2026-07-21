@@ -13,12 +13,12 @@ import jakarta.persistence.Table
 import org.hibernate.annotations.Comment
 
 @Entity
-@Table(name = "order_status_history")
+@Table(name = "order_status_histories")
 @Comment("주문 상태 변경 이력")
 class OrderStatusHistory(
 
-    @Comment("주문 ID (order_info.id)")
-    @Column(name = "order_info_id", nullable = false, updatable = false)
+    @Comment("주문 ID (orders.id)")
+    @Column(name = "order_id", nullable = false, updatable = false)
     val orderId: Long,
 
     @Comment("변경된 주문 상태")

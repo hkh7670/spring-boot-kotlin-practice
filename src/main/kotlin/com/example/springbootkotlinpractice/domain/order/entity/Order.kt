@@ -10,13 +10,13 @@ import org.hibernate.annotations.Comment
 
 @Entity
 @Table(
-    name = "order_info",
+    name = "orders",
     uniqueConstraints = [
-        UniqueConstraint(name = "order_info_unique_1", columnNames = ["order_uid"]),
+        UniqueConstraint(name = "uq_orders_01", columnNames = ["order_uid"]),
     ]
 )
 @Comment("주문 정보")
-class OrderInfo(
+class Order(
 
     @Comment("외부 노출용 주문 식별자 (ULID, Toss orderId)")
     @Column(name = "order_uid", nullable = false, updatable = false, length = 26)
@@ -30,9 +30,9 @@ class OrderInfo(
     @Column(name = "product_total_price", nullable = false)
     var productTotalPrice: Int = 0,
 
-    @Comment("배송 정보 ID (delivery_info.id)")
-    @Column(name = "delivery_info_id", nullable = false, updatable = false)
-    val deliveryInfoId: Long,
+    @Comment("배송 옵션 정보 ID (delivery_options.id)")
+    @Column(name = "delivery_option_id", nullable = false, updatable = false)
+    val deliveryOptionId: Long,
 
     @Comment("주문 시점의 배송 가격 (delivery_info.price 는 이후 변경될 수 있어 스냅샷 저장)")
     @Column(name = "delivery_price", nullable = false, updatable = false)
@@ -71,13 +71,13 @@ class OrderInfo(
         fun of(
             memberId: Long,
             productTotalPrice: Int,
-            deliveryInfoId: Long,
+            deliveryOptionId: Long,
             deliveryPrice: Int
-        ): OrderInfo {
-            return OrderInfo(
+        ): Order {
+            return Order(
                 memberId = memberId,
                 productTotalPrice = productTotalPrice,
-                deliveryInfoId = deliveryInfoId,
+                deliveryOptionId = deliveryOptionId,
                 deliveryPrice = deliveryPrice,
             )
         }

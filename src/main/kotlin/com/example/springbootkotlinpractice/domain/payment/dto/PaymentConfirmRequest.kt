@@ -9,7 +9,7 @@ data class PaymentConfirmRequest(
     @field:NotBlank
     val paymentKey: String,
 
-    @field:Schema(description = "가맹점 주문번호 (order_info.order_uid)", example = "01J8ZX9K5Q7N3F2W1V6C4T8B0M")
+    @field:Schema(description = "가맹점 주문번호 (orders.order_uid)", example = "01J8ZX9K5Q7N3F2W1V6C4T8B0M")
     @field:NotBlank
     val orderId: String,
 

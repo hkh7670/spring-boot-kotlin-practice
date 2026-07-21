@@ -1,24 +1,24 @@
 package com.example.springbootkotlinpractice.domain.order.entity
 
 import com.example.springbootkotlinpractice.common.entity.BaseTimeEntity
-import com.example.springbootkotlinpractice.domain.product.entity.ProductInfo
+import com.example.springbootkotlinpractice.domain.product.entity.Product
 import jakarta.persistence.*
 import org.hibernate.annotations.Comment
 
 @Entity
-@Table(name = "order_detail_info")
-@Comment("주문 상세 정보")
-class OrderDetailInfo(
+@Table(name = "order_items")
+@Comment("주문 상품 정보")
+class OrderItem(
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_info_id")
-    @Comment("주문 ID (order_info.id)")
-    val orderInfo: OrderInfo,
+    @JoinColumn(name = "order_id")
+    @Comment("주문 ID (orders.id)")
+    val order: Order,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_info_id")
-    @Comment("상품 ID (product_info.id)")
-    val productInfo: ProductInfo,
+    @JoinColumn(name = "product_id")
+    @Comment("상품 ID (products.id)")
+    val product: Product,
 
     @Comment("주문 시점의 상품 가격")
     @Column(name = "price", nullable = false, updatable = false)
@@ -36,14 +36,14 @@ class OrderDetailInfo(
 
     companion object {
         fun of(
-            orderInfo: OrderInfo,
-            productInfo: ProductInfo,
+            order: Order,
+            product: Product,
             price: Long,
             count: Int
-        ): OrderDetailInfo {
-            return OrderDetailInfo(
-                orderInfo = orderInfo,
-                productInfo = productInfo,
+        ): OrderItem {
+            return OrderItem(
+                order = order,
+                product = product,
                 price = price,
                 count = count,
             )

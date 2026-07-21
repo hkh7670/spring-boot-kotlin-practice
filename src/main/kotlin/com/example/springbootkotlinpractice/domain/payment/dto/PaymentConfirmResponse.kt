@@ -4,7 +4,7 @@ import com.example.springbootkotlinpractice.enums.PaymentStatus
 import java.time.LocalDateTime
 
 data class PaymentConfirmResponse(
-    val payInfoId: Long,
+    val paymentId: Long,
     val orderId: Long,
     val orderUid: String,
     val paymentKey: String,

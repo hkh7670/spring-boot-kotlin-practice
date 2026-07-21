@@ -10,9 +10,9 @@ import jakarta.persistence.Table
 import org.hibernate.annotations.Comment
 
 @Entity
-@Table(name = "delivery_info")
-@Comment("배송 관련 정보")
-class DeliveryInfo(
+@Table(name = "delivery_options")
+@Comment("배송 옵션 관련 정보")
+class DeliveryOption(
 
     @Comment("배송 옵션 명")
     @Column(name = "name", nullable = false, length = 50)

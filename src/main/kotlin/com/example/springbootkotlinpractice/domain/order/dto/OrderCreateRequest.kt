@@ -6,8 +6,8 @@ import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Positive
 
 data class OrderCreateRequest(
-    @field:Schema(description = "배송 정보 ID", example = "1")
-    val deliveryInfoId: Long,
+    @field:Schema(description = "배송 옵션 ID", example = "1")
+    val deliveryOptionId: Long,
 
     @field:Schema(description = "주문할 상품 목록")
     @field:NotEmpty

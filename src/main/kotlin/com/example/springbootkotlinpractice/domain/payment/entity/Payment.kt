@@ -16,18 +16,18 @@ import org.hibernate.annotations.Comment
 
 @Entity
 @Table(
-    name = "pay_info",
+    name = "payments",
     uniqueConstraints = [
-        UniqueConstraint(name = "pay_info_unique_1", columnNames = ["order_info_id"]),
-        UniqueConstraint(name = "pay_info_unique_2", columnNames = ["payment_key"]),
+        UniqueConstraint(name = "uq_payments_01", columnNames = ["order_id"]),
+        UniqueConstraint(name = "uq_payments_02", columnNames = ["payment_key"]),
     ]
 )
 @Comment("결제 정보")
-class PayInfo(
+class Payment(
 
-    @Comment("주문 ID (order_info.id)")
-    @Column(name = "order_info_id", nullable = false, updatable = false)
-    val orderInfoId: Long,
+    @Comment("주문 ID (orders.id)")
+    @Column(name = "order_id", nullable = false, updatable = false)
+    val orderId: Long,
 
     @Comment("Toss Payments 결제 고유 키")
     @Column(name = "payment_key", nullable = false, updatable = false, length = 200)
@@ -58,15 +58,15 @@ class PayInfo(
 
     companion object {
         fun of(
-            orderInfoId: Long,
+            orderId: Long,
             paymentKey: String,
             amount: Int,
             status: PaymentStatus,
             method: String?,
             approvedAt: LocalDateTime?,
-        ): PayInfo {
-            return PayInfo(
-                orderInfoId = orderInfoId,
+        ): Payment {
+            return Payment(
+                orderId = orderId,
                 paymentKey = paymentKey,
                 amount = amount,
                 status = status,
