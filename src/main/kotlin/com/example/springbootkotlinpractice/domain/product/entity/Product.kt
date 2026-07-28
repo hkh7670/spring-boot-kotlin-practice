@@ -25,6 +25,14 @@ class Product(
     @Comment("재고 수량")
     @Column(name = "stock_count", nullable = false)
     var stockCount: Int = 0,
+
+    @Comment("카테고리 ID (categories.id, 소분류)")
+    @Column(name = "category_id", nullable = true)
+    var categoryId: Long? = null,
+
+    @Comment("업체 ID (vendors.id)")
+    @Column(name = "vendor_id", nullable = true)
+    var vendorId: Long? = null,
 ) : BaseTimeEntity() {
 
     @Id

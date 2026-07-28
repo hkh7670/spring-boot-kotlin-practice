@@ -27,7 +27,11 @@ class GoogleOAuthClient(
         return toOAuthUserInfo(fetchUserInfo(tokenResponse.accessToken))
     }
 
-    private fun exchangeToken(code: String, codeVerifier: String, redirectUri: String): GoogleTokenResponse {
+    private fun exchangeToken(
+        code: String,
+        codeVerifier: String,
+        redirectUri: String
+    ): GoogleTokenResponse {
         return runCatching {
             googleTokenApi.exchangeToken(
                 buildTokenRequest(

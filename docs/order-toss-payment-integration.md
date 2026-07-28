@@ -51,7 +51,7 @@ enums/                       OrderStatus, PaymentStatus
 ```
 
 - 기존 `common/oauth/*` + `OAuthRestClientConfig` 패턴(RestClient + `HttpServiceProxyFactory`, 4xx/5xx 에러 핸들러)을 Toss 연동에도 그대로 재사용.
-- `ResponseCodeEnum`에 `NOT_FOUND_ORDER`, `NOT_FOUND_PRODUCT`, `NOT_FOUND_DELIVERY`, `NOT_ENOUGH_STOCK`, `ALREADY_PAID_ORDER`, `PAYMENT_AMOUNT_MISMATCH`, `PAYMENT_CONFIRM_FAILED`, `ORDER_ALREADY_CANCELLED` 추가.
+- `ResponseCodeEnum`에 `NOT_FOUND_ORDER`, `NOT_FOUND_PRODUCT`, `NOT_FOUND_DELIVERY_OPTION`, `NOT_ENOUGH_STOCK`, `ALREADY_PAID_ORDER`, `PAYMENT_AMOUNT_MISMATCH`, `PAYMENT_CONFIRM_FAILED`, `ORDER_ALREADY_CANCELLED` 추가.
 
 ## API
 

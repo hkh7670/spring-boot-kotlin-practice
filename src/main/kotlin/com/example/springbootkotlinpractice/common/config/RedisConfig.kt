@@ -15,9 +15,10 @@ class RedisConfig(
     // StringRedisTemplate 은 이 RedisConnectionFactory 를 기반으로 Spring Boot 가 자동 구성한다
     @Bean
     fun redisConnectionFactory(): RedisConnectionFactory {
-        val configuration = RedisStandaloneConfiguration(redisProperties.host, redisProperties.port).apply {
-            setPassword(redisProperties.password)
-        }
+        val configuration = RedisStandaloneConfiguration(
+            redisProperties.host,
+            redisProperties.port
+        ).apply { setPassword(redisProperties.password) }
         return LettuceConnectionFactory(configuration)
     }
 }

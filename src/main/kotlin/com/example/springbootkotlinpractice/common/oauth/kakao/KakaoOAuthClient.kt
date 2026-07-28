@@ -19,7 +19,11 @@ class KakaoOAuthClient(
     override val provider: JoinProvider = JoinProvider.KAKAO
 
     // 카카오 토큰 API는 PKCE(code_verifier)를 지원하지 않아 codeVerifier는 사용하지 않고 client_secret으로만 code 탈취를 방어한다
-    override fun getUserInfoByAuthorizationCode(code: String, codeVerifier: String, redirectUri: String): OAuthUserInfo {
+    override fun getUserInfoByAuthorizationCode(
+        code: String,
+        codeVerifier: String,
+        redirectUri: String
+    ): OAuthUserInfo {
         val tokenResponse = exchangeToken(code, redirectUri)
         val response = fetchUserInfo(tokenResponse.accessToken)
         val account = response.kakaoAccount
@@ -31,13 +35,18 @@ class KakaoOAuthClient(
     }
 
     private fun exchangeToken(code: String, redirectUri: String): KakaoTokenResponse {
-        return runCatching { kakaoTokenApi.exchangeToken(buildTokenRequest(code, redirectUri).toFormData()) }
-            .getOrElse {
-                if (it is ApiErrorException) {
-                    throw it
-                }
-                throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        return runCatching {
+            kakaoTokenApi
+                .exchangeToken(
+                    buildTokenRequest(code, redirectUri)
+                        .toFormData()
+                )
+        }.getOrElse {
+            if (it is ApiErrorException) {
+                throw it
             }
+            throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        }
     }
 
     private fun buildTokenRequest(

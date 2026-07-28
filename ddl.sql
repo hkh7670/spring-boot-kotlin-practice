@@ -1,3 +1,18 @@
+CREATE TABLE categories
+(
+    id               BIGINT AUTO_INCREMENT
+        PRIMARY KEY,
+    parent_id        BIGINT      NULL COMMENT '상위 카테고리 ID (categories.id, 대분류는 NULL)',
+    name             VARCHAR(50) NOT NULL COMMENT '카테고리 명',
+    level            VARCHAR(20) NOT NULL COMMENT '카테고리 레벨 (LARGE/MEDIUM/SMALL)',
+    created_datetime DATETIME(6) NOT NULL,
+    updated_datetime DATETIME(6) NOT NULL
+)
+    COMMENT '상품 카테고리 (대/중/소분류 계층 구조)';
+
+CREATE INDEX idx_categories_01
+    ON categories (parent_id);
+
 CREATE TABLE delivery_options
 (
     id               BIGINT AUTO_INCREMENT
@@ -115,8 +130,40 @@ CREATE TABLE products
     name             VARCHAR(50)   NOT NULL COMMENT '상품 명',
     price            INT           NOT NULL COMMENT '가격',
     stock_count      INT DEFAULT 0 NOT NULL COMMENT '재고 수량',
+    category_id      BIGINT        NULL COMMENT '카테고리 ID (categories.id, 소분류)',
+    vendor_id        BIGINT        NULL COMMENT '업체 ID (vendors.id)',
     created_datetime DATETIME(6)   NOT NULL,
     updated_datetime DATETIME(6)   NOT NULL
 )
     COMMENT '상품 정보';
+
+CREATE INDEX idx_products_01
+    ON products (category_id);
+
+CREATE INDEX idx_products_02
+    ON products (vendor_id);
+
+CREATE TABLE vendors
+(
+    id                            BIGINT AUTO_INCREMENT
+        PRIMARY KEY,
+    name                          VARCHAR(100) NOT NULL COMMENT '업체명',
+    business_registration_number VARCHAR(20)   NULL COMMENT '사업자등록번호',
+    contact_number                VARCHAR(20)   NULL COMMENT '업체 연락처',
+    created_datetime              DATETIME(6)   NOT NULL,
+    updated_datetime              DATETIME(6)   NOT NULL
+)
+    COMMENT '상품 업체(공급사) 정보';
+
+-- 기존 DB의 products 테이블에 category_id, vendor_id 컬럼과 인덱스를 추가할 때 사용
+ALTER TABLE products
+    ADD COLUMN category_id BIGINT NULL COMMENT '카테고리 ID (categories.id, 소분류)' AFTER stock_count;
+ALTER TABLE products
+    ADD COLUMN vendor_id BIGINT NULL COMMENT '업체 ID (vendors.id)' AFTER category_id;
+
+CREATE INDEX idx_products_01
+    ON products (category_id);
+
+CREATE INDEX idx_products_02
+    ON products (vendor_id);
 

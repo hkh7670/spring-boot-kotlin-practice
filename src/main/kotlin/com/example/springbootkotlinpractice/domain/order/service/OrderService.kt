@@ -101,7 +101,7 @@ class OrderService(
 
     private fun getDeliveryOption(deliveryOptionId: Long): DeliveryOption {
         return deliveryOptionRepository.findByIdOrNull(deliveryOptionId)
-            ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_DELIVERY)
+            ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_DELIVERY_OPTION)
     }
 
     private fun getProduct(productId: Long): Product {

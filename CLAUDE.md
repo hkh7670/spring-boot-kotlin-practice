@@ -141,12 +141,18 @@ Controller → Service → Repository 레이어를 엄격히 지키고, Entity�
 
 ## DB 스키마 (`ddl.sql`)
 
-프로젝트 루트의 `ddl.sql`이 스키마의 단일 소스다. 두 부분으로 구성:
-1. 파일 앞부분: 전체 `CREATE TABLE` (신규 DB 구축용, 최신 스키마 반영).
-2. 파일 끝부분: `-- 기존 DB에 ... 사용` 주석이 붙은 `ALTER TABLE`/`CREATE TABLE` 문 (운영 DB처럼
-   이미 존재하는 DB에 변경분만 적용할 때 수동 실행).
+프로젝트 루트의 `ddl.sql`이 스키마의 단일 소스다. 기본적으로 **완전히 새로운 DB에 처음 구축한다는
+전제로 작성**한다 — 전체 `CREATE TABLE` 문이 항상 최신 스키마를 그대로 반영하며, 과거 변경 이력을
+위한 중복 `CREATE TABLE`은 남기지 않는다.
 
-**엔티티를 바꿀 때마다 이 두 부분을 모두 갱신해야 한다** — `local`/`dev`/`mysql` 프로파일은
+**신규 테이블 추가**는 앞부분에 `CREATE TABLE` 하나만 작성하면 된다 — 아직 어떤 DB에도 존재하지
+않는 테이블이라 별도 `ALTER` 문이 필요 없다.
+
+**기존 테이블에 컬럼/인덱스를 추가하는 경우**에는 이미 운영 중인 DB에는 `CREATE TABLE`을 다시 실행할
+수 없으므로, 파일 끝에 해당 변경만을 위한 `ALTER TABLE`/`CREATE INDEX` 문을 별도로 작성한다(앞부분
+`CREATE TABLE`에는 물론 최종 컬럼까지 전부 포함시킨다).
+
+**엔티티를 바꿀 때마다 `ddl.sql`도 최신 상태로 갱신해야 한다** — `local`/`dev`/`mysql` 프로파일은
 `ddl-auto: none`이라 Hibernate가 스키마를 자동으로 맞춰주지 않는다. (`h2`/`test`만 `create-drop`으로
 매번 자동 반영되므로 테스트 통과만으로 배포 DB 반영을 확인했다고 착각하지 말 것.)
 
@@ -174,8 +180,10 @@ Controller → Service → Repository 레이어를 엄격히 지키고, Entity�
 
 ## 관련 프로젝트
 
-- `/Users/kyu/workspace/oauth-test`: 이 백엔드를 수동 테스트하기 위한 Vite + React + TS 프론트엔드
-  (OAuth 로그인, 주문 생성, Toss 결제 테스트 페이지 포함). 백엔드 API 변경 시 필요하면 같이 갱신한다.
+- `/Users/kyu/workspace/backend-test-client`: 이 백엔드를 수동 테스트하기 위한 Vite + React + TS
+  프론트엔드 (OAuth 로그인, 주문 생성, Toss 결제 테스트 페이지 포함). OAuth 테스트 전용이 아니라
+  백엔드 전반의 수동 테스트 클라이언트라 `oauth-test`에서 이름을 바꿨다. 백엔드 API 변경 시 필요하면
+  같이 갱신한다.
 
 ## 문서
 

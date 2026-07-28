@@ -35,13 +35,14 @@ class NaverOAuthClient(
     }
 
     private fun exchangeToken(code: String, redirectUri: String): NaverTokenResponse {
-        return runCatching { naverTokenApi.exchangeToken(buildTokenRequest(code, redirectUri).toFormData()) }
-            .getOrElse {
-                if (it is ApiErrorException) {
-                    throw it
-                }
-                throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        return runCatching {
+            naverTokenApi.exchangeToken(buildTokenRequest(code, redirectUri).toFormData())
+        }.getOrElse {
+            if (it is ApiErrorException) {
+                throw it
             }
+            throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
+        }
     }
 
     private fun buildTokenRequest(

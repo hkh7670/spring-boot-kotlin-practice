@@ -3,9 +3,11 @@ package com.example.springbootkotlinpractice.domain.order.dto
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Positive
 
 data class OrderCreateRequest(
+    @field:NotNull
     @field:Schema(description = "배송 옵션 ID", example = "1")
     val deliveryOptionId: Long,
 
