@@ -1,10 +1,10 @@
 package com.example.springbootkotlinpractice.domain.auth.api
 
-import com.example.springbootkotlinpractice.common.oauth.OAuthClient
-import com.example.springbootkotlinpractice.common.oauth.OAuthClientResolver
 import com.example.springbootkotlinpractice.common.oauth.OAuthUserInfo
 import com.example.springbootkotlinpractice.common.redis.RedisRepository
 import com.example.springbootkotlinpractice.domain.auth.dto.OAuthSignUpRequest
+import com.example.springbootkotlinpractice.domain.auth.service.AuthService
+import com.example.springbootkotlinpractice.domain.auth.service.OAuthRelayCodeService
 import com.example.springbootkotlinpractice.domain.member.repository.MemberRepository
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -14,7 +14,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
-import org.mockito.Mockito.mock
+import org.mockito.kotlin.any
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -27,14 +27,14 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import java.time.LocalDate
 
 private const val BASE_URL = "/api/v1/auth/oauth"
-private const val FAKE_CODE = "fake-auth-code"
-private const val FAKE_CODE_VERIFIER = "fake-code-verifier"
-private const val FAKE_REDIRECT_URI = "com.example.app:/oauth2redirect"
 
+// oauth2Login()의 Provider 리다이렉트 왕복 자체는 MockMvc로 흉내내기 어려워 다루지 않는다.
+// 대신 우리가 직접 구현한 조각들 - AuthService.oauthLogin() 의 LOGIN/NEED_SIGN_UP 분기,
+// relay code 교환(/exchange) 엔드포인트, tempToken 기반 회원가입(/sign-up) - 을 검증한다.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@DisplayName("OAuth 로그인/회원가입 통합 테스트")
+@DisplayName("OAuth 로그인 결과 교환 / 회원가입 통합 테스트")
 class AuthOAuthControllerTest {
 
     @Autowired
@@ -46,42 +46,33 @@ class AuthOAuthControllerTest {
     @Autowired
     lateinit var memberRepository: MemberRepository
 
-    @MockitoBean
-    lateinit var oAuthClientResolver: OAuthClientResolver
+    @Autowired
+    lateinit var authService: AuthService
+
+    @Autowired
+    lateinit var oAuthRelayCodeService: OAuthRelayCodeService
 
     @MockitoBean
     lateinit var redisRepository: RedisRepository
 
+    private val fakeRedisStore = mutableMapOf<String, String>()
+
     @BeforeEach
     fun setUp() {
         memberRepository.deleteAll()
+        fakeRedisStore.clear()
+        given(redisRepository.save(any(), any(), any())).willAnswer { invocation ->
+            fakeRedisStore[invocation.getArgument(0)] = invocation.getArgument(1)
+        }
+        given(redisRepository.find(any())).willAnswer { invocation ->
+            fakeRedisStore[invocation.getArgument<String>(0)]
+        }
+        given(redisRepository.delete(any())).willAnswer { invocation ->
+            fakeRedisStore.remove(invocation.getArgument<String>(0)) != null
+        }
     }
 
     // ── 공통 헬퍼 ──────────────────────────────────────────────────────────
-
-    private fun stubOAuthClient(provider: JoinProvider, userInfo: OAuthUserInfo): OAuthClient {
-        val mockClient = mock(OAuthClient::class.java)
-        given(mockClient.getUserInfoByAuthorizationCode(FAKE_CODE, FAKE_CODE_VERIFIER, FAKE_REDIRECT_URI))
-            .willReturn(userInfo)
-        given(oAuthClientResolver.resolve(provider)).willReturn(mockClient)
-        return mockClient
-    }
-
-    private fun oauthLoginRequestBody(): String {
-        return """{"code": "$FAKE_CODE", "codeVerifier": "$FAKE_CODE_VERIFIER", "redirectUri": "$FAKE_REDIRECT_URI"}"""
-    }
-
-    private fun oauthLogin(endpoint: String): String {
-        val result = mockMvc.post("$BASE_URL/$endpoint") {
-            contentType = MediaType.APPLICATION_JSON
-            content = oauthLoginRequestBody()
-        }.andReturn()
-        return result.response.contentAsString
-    }
-
-    private fun extractTempToken(responseBody: String): String {
-        return objectMapper.readTree(responseBody)["data"]["tempToken"].asText()
-    }
 
     private fun signUp(tempToken: String): String {
         val request = OAuthSignUpRequest(
@@ -98,42 +89,91 @@ class AuthOAuthControllerTest {
         return result.response.contentAsString
     }
 
-    // ── Google ─────────────────────────────────────────────────────────────
+    // ── /exchange ──────────────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("Google OAuth")
-    inner class GoogleOAuth {
-
-        private val googleUser = OAuthUserInfo(
-            providerId = "google-123456789",
-            email = "testuser@gmail.com",
-            nickname = null,
-        )
-
-        @BeforeEach
-        fun stubGoogle() {
-            stubOAuthClient(JoinProvider.GOOGLE, googleUser)
-        }
+    @DisplayName("POST /exchange")
+    inner class Exchange {
 
         @Test
-        @DisplayName("신규 유저 - NEED_SIGN_UP + tempToken 반환")
-        fun `Google 신규 유저 로그인 시 NEED_SIGN_UP 상태와 tempToken을 반환한다`() {
-            mockMvc.post("$BASE_URL/google") {
+        @DisplayName("발급된 relay code로 로그인 결과(NEED_SIGN_UP)를 조회한다")
+        fun `유효한 code면 relay code 발급 당시의 응답을 반환한다`() {
+            val userInfo = OAuthUserInfo(
+                providerId = "google-123456789",
+                email = "testuser@gmail.com",
+                nickname = null,
+            )
+            val loginResponse = authService.oauthLogin(JoinProvider.GOOGLE, userInfo)
+            val code = oAuthRelayCodeService.issue(loginResponse)
+
+            mockMvc.post("$BASE_URL/exchange") {
                 contentType = MediaType.APPLICATION_JSON
-                content = oauthLoginRequestBody()
+                content = """{"code": "$code"}"""
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.data.status") { value("NEED_SIGN_UP") }
                 jsonPath("$.data.tempToken") { isNotEmpty() }
-                jsonPath("$.data.accessToken") { doesNotExist() }
-                jsonPath("$.data.refreshToken") { doesNotExist() }
             }
         }
 
         @Test
+        @DisplayName("같은 code를 두 번 사용하면 두 번째는 실패한다 (1회용)")
+        fun `이미 소비된 code로 재요청하면 에러를 반환한다`() {
+            val userInfo = OAuthUserInfo(providerId = "kakao-1", email = null, nickname = "닉네임")
+            val code = oAuthRelayCodeService.issue(authService.oauthLogin(JoinProvider.KAKAO, userInfo))
+
+            mockMvc.post("$BASE_URL/exchange") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"code": "$code"}"""
+            }
+
+            mockMvc.post("$BASE_URL/exchange") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"code": "$code"}"""
+            }.andExpect {
+                status { isBadRequest() }
+            }
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 code로 요청하면 에러를 반환한다")
+        fun `존재하지 않는 code면 에러를 반환한다`() {
+            mockMvc.post("$BASE_URL/exchange") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"code": "no-such-code"}"""
+            }.andExpect {
+                status { isBadRequest() }
+            }
+        }
+
+        @Test
+        @DisplayName("code가 빈 값이면 유효성 검사 에러를 반환한다")
+        fun `code가 빈 값이면 유효성 검사 에러를 반환한다`() {
+            mockMvc.post("$BASE_URL/exchange") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"code": ""}"""
+            }.andExpect {
+                status { isBadRequest() }
+            }
+        }
+    }
+
+    // ── /sign-up ───────────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("POST /sign-up")
+    inner class SignUp {
+
+        @Test
         @DisplayName("신규 유저 - tempToken으로 회원가입 후 JWT 발급")
-        fun `Google tempToken으로 회원가입 시 JWT 토큰을 반환하고 Member가 저장된다`() {
-            val tempToken = extractTempToken(oauthLogin("google"))
+        fun `tempToken으로 회원가입 시 JWT 토큰을 반환하고 Member가 저장된다`() {
+            val userInfo = OAuthUserInfo(
+                providerId = "google-123456789",
+                email = "testuser@gmail.com",
+                nickname = null,
+            )
+            val loginResponse = authService.oauthLogin(JoinProvider.GOOGLE, userInfo)
+            val tempToken = requireNotNull(loginResponse.tempToken)
 
             val signUpBody = signUp(tempToken)
             val tree = objectMapper.readTree(signUpBody)
@@ -141,36 +181,21 @@ class AuthOAuthControllerTest {
             assertThat(tree["data"]["accessToken"].asText()).isNotBlank()
             assertThat(tree["data"]["refreshToken"].asText()).isNotBlank()
 
-            val saved = memberRepository.findByProviderIdAndJoinProvider(googleUser.providerId, JoinProvider.GOOGLE)
+            val saved = memberRepository.findByProviderIdAndJoinProvider(userInfo.providerId, JoinProvider.GOOGLE)
             assertThat(saved).isNotNull
-            assertThat(saved!!.email).isEqualTo(googleUser.email)
+            assertThat(saved!!.email).isEqualTo(userInfo.email)
             assertThat(saved.joinProvider).isEqualTo(JoinProvider.GOOGLE)
         }
 
         @Test
-        @DisplayName("기존 유저 - LOGIN + JWT 발급")
-        fun `Google 기존 유저 로그인 시 LOGIN 상태와 JWT를 반환한다`() {
-            val tempToken = extractTempToken(oauthLogin("google"))
+        @DisplayName("이미 가입된 providerId로 재가입 시도 - 409 반환")
+        fun `중복 회원가입 시도 시 에러를 반환한다`() {
+            val userInfo = OAuthUserInfo(providerId = "naver-1", email = null, nickname = "네이버테스터")
+            val tempToken = requireNotNull(authService.oauthLogin(JoinProvider.NAVER, userInfo).tempToken)
             signUp(tempToken)
 
-            mockMvc.post("$BASE_URL/google") {
-                contentType = MediaType.APPLICATION_JSON
-                content = oauthLoginRequestBody()
-            }.andExpect {
-                status { isOk() }
-                jsonPath("$.data.status") { value("LOGIN") }
-                jsonPath("$.data.accessToken") { isNotEmpty() }
-                jsonPath("$.data.refreshToken") { isNotEmpty() }
-                jsonPath("$.data.tempToken") { doesNotExist() }
-            }
-        }
-
-        @Test
-        @DisplayName("이미 가입된 providerId로 재가입 시도 - 에러 반환")
-        fun `Google 중복 회원가입 시도 시 에러를 반환한다`() {
-            val tempToken = extractTempToken(oauthLogin("google"))
-            signUp(tempToken)
-
+            // tempToken 자체는 1회용이 아니라 JWT 만료 전까지 유효하므로, 같은 tempToken으로 재요청해도
+            // DB의 providerId 유니크 제약(existsByProviderIdAndJoinProvider)에서 막혀야 한다
             mockMvc.post("$BASE_URL/sign-up") {
                 contentType = MediaType.APPLICATION_JSON
                 content = objectMapper.writeValueAsString(
@@ -186,139 +211,6 @@ class AuthOAuthControllerTest {
                 status { isConflict() }
             }
         }
-    }
-
-    // ── Kakao ──────────────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("Kakao OAuth")
-    inner class KakaoOAuth {
-
-        private val kakaoUser = OAuthUserInfo(
-            providerId = "kakao-9876543210",
-            email = "testuser@kakao.com",
-            nickname = "카카오테스터",
-        )
-
-        @BeforeEach
-        fun stubKakao() {
-            stubOAuthClient(JoinProvider.KAKAO, kakaoUser)
-        }
-
-        @Test
-        @DisplayName("신규 유저 - NEED_SIGN_UP + tempToken 반환 (email, nickname 포함)")
-        fun `Kakao 신규 유저 로그인 시 NEED_SIGN_UP 상태와 tempToken을 반환한다`() {
-            mockMvc.post("$BASE_URL/kakao") {
-                contentType = MediaType.APPLICATION_JSON
-                content = oauthLoginRequestBody()
-            }.andExpect {
-                status { isOk() }
-                jsonPath("$.data.status") { value("NEED_SIGN_UP") }
-                jsonPath("$.data.tempToken") { isNotEmpty() }
-            }
-        }
-
-        @Test
-        @DisplayName("신규 유저 - tempToken으로 회원가입 후 JWT 발급")
-        fun `Kakao tempToken으로 회원가입 시 JWT 토큰을 반환하고 Member가 저장된다`() {
-            val tempToken = extractTempToken(oauthLogin("kakao"))
-
-            val signUpBody = signUp(tempToken)
-            val tree = objectMapper.readTree(signUpBody)
-
-            assertThat(tree["data"]["accessToken"].asText()).isNotBlank()
-
-            val saved = memberRepository.findByProviderIdAndJoinProvider(kakaoUser.providerId, JoinProvider.KAKAO)
-            assertThat(saved).isNotNull
-            assertThat(saved!!.email).isEqualTo(kakaoUser.email)
-            assertThat(saved.joinProvider).isEqualTo(JoinProvider.KAKAO)
-        }
-
-        @Test
-        @DisplayName("기존 유저 - LOGIN + JWT 발급")
-        fun `Kakao 기존 유저 로그인 시 LOGIN 상태와 JWT를 반환한다`() {
-            val tempToken = extractTempToken(oauthLogin("kakao"))
-            signUp(tempToken)
-
-            mockMvc.post("$BASE_URL/kakao") {
-                contentType = MediaType.APPLICATION_JSON
-                content = oauthLoginRequestBody()
-            }.andExpect {
-                status { isOk() }
-                jsonPath("$.data.status") { value("LOGIN") }
-                jsonPath("$.data.accessToken") { isNotEmpty() }
-            }
-        }
-    }
-
-    // ── Naver ──────────────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("Naver OAuth")
-    inner class NaverOAuth {
-
-        private val naverUser = OAuthUserInfo(
-            providerId = "naver-ABCDE12345",
-            email = null,
-            nickname = "네이버테스터",
-        )
-
-        @BeforeEach
-        fun stubNaver() {
-            stubOAuthClient(JoinProvider.NAVER, naverUser)
-        }
-
-        @Test
-        @DisplayName("신규 유저 - email null이어도 NEED_SIGN_UP + tempToken 반환")
-        fun `Naver 신규 유저 로그인 시 이메일 없어도 NEED_SIGN_UP 상태와 tempToken을 반환한다`() {
-            mockMvc.post("$BASE_URL/naver") {
-                contentType = MediaType.APPLICATION_JSON
-                content = oauthLoginRequestBody()
-            }.andExpect {
-                status { isOk() }
-                jsonPath("$.data.status") { value("NEED_SIGN_UP") }
-                jsonPath("$.data.tempToken") { isNotEmpty() }
-            }
-        }
-
-        @Test
-        @DisplayName("신규 유저 - email null인 상태로 회원가입 후 JWT 발급")
-        fun `Naver tempToken으로 회원가입 시 email이 null이어도 Member가 저장된다`() {
-            val tempToken = extractTempToken(oauthLogin("naver"))
-
-            val signUpBody = signUp(tempToken)
-            val tree = objectMapper.readTree(signUpBody)
-
-            assertThat(tree["data"]["accessToken"].asText()).isNotBlank()
-
-            val saved = memberRepository.findByProviderIdAndJoinProvider(naverUser.providerId, JoinProvider.NAVER)
-            assertThat(saved).isNotNull
-            assertThat(saved!!.email).isNull()
-            assertThat(saved.joinProvider).isEqualTo(JoinProvider.NAVER)
-        }
-
-        @Test
-        @DisplayName("기존 유저 - LOGIN + JWT 발급")
-        fun `Naver 기존 유저 로그인 시 LOGIN 상태와 JWT를 반환한다`() {
-            val tempToken = extractTempToken(oauthLogin("naver"))
-            signUp(tempToken)
-
-            mockMvc.post("$BASE_URL/naver") {
-                contentType = MediaType.APPLICATION_JSON
-                content = oauthLoginRequestBody()
-            }.andExpect {
-                status { isOk() }
-                jsonPath("$.data.status") { value("LOGIN") }
-                jsonPath("$.data.accessToken") { isNotEmpty() }
-            }
-        }
-    }
-
-    // ── 공통 에러 케이스 ────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("공통 에러 케이스")
-    inner class CommonErrorCases {
 
         @Test
         @DisplayName("유효하지 않은 tempToken으로 회원가입 시도 - 401 반환")
@@ -338,38 +230,19 @@ class AuthOAuthControllerTest {
                 status { isUnauthorized() }
             }
         }
+    }
 
-        @Test
-        @DisplayName("code/codeVerifier/redirectUri 빈 값으로 Kakao 로그인 요청 시 - 유효성 검사 에러")
-        fun `필수 필드가 빈 값이면 Kakao 로그인 요청 시 유효성 검사 에러를 반환한다`() {
-            mockMvc.post("$BASE_URL/kakao") {
-                contentType = MediaType.APPLICATION_JSON
-                content = """{"code": "", "codeVerifier": "", "redirectUri": ""}"""
-            }.andExpect {
-                status { isBadRequest() }
-            }
-        }
+    @Test
+    @DisplayName("기존 회원이 다시 oauthLogin 하면 LOGIN 상태와 JWT를 반환한다")
+    fun `기존 회원은 LOGIN 상태와 JWT를 반환한다`() {
+        val userInfo = OAuthUserInfo(providerId = "kakao-existing", email = "a@b.com", nickname = "테스터")
+        val tempToken = requireNotNull(authService.oauthLogin(JoinProvider.KAKAO, userInfo).tempToken)
+        signUp(tempToken)
 
-        @Test
-        @DisplayName("code/codeVerifier/redirectUri 빈 값으로 Naver 로그인 요청 시 - 유효성 검사 에러")
-        fun `필수 필드가 빈 값이면 Naver 로그인 요청 시 유효성 검사 에러를 반환한다`() {
-            mockMvc.post("$BASE_URL/naver") {
-                contentType = MediaType.APPLICATION_JSON
-                content = """{"code": "", "codeVerifier": "", "redirectUri": ""}"""
-            }.andExpect {
-                status { isBadRequest() }
-            }
-        }
+        val loginResponse = authService.oauthLogin(JoinProvider.KAKAO, userInfo)
 
-        @Test
-        @DisplayName("code/codeVerifier/redirectUri 빈 값으로 Google 로그인 요청 시 - 유효성 검사 에러")
-        fun `필수 필드가 빈 값이면 Google 로그인 요청 시 유효성 검사 에러를 반환한다`() {
-            mockMvc.post("$BASE_URL/google") {
-                contentType = MediaType.APPLICATION_JSON
-                content = """{"code": "", "codeVerifier": "", "redirectUri": ""}"""
-            }.andExpect {
-                status { isBadRequest() }
-            }
-        }
+        assertThat(loginResponse.accessToken).isNotBlank()
+        assertThat(loginResponse.refreshToken).isNotBlank()
+        assertThat(loginResponse.tempToken).isNull()
     }
 }

@@ -7,7 +7,6 @@ import com.example.springbootkotlinpractice.domain.auth.dto.OAuthLoginResponse
 import com.example.springbootkotlinpractice.domain.auth.dto.OAuthSignUpRequest
 import com.example.springbootkotlinpractice.domain.auth.enums.OAuthLoginStatus
 import com.example.springbootkotlinpractice.common.config.JwtProperties
-import com.example.springbootkotlinpractice.common.oauth.OAuthClientResolver
 import com.example.springbootkotlinpractice.common.oauth.OAuthUserInfo
 import com.example.springbootkotlinpractice.common.redis.RedisRepository
 import com.example.springbootkotlinpractice.common.security.JwtTokenProvider
@@ -29,7 +28,6 @@ class AuthService(
     private val memberRepository: MemberRepository,
     private val jwtTokenProvider: JwtTokenProvider,
     private val jwtProperties: JwtProperties,
-    private val oAuthClientResolver: OAuthClientResolver,
     private val passwordEncoder: PasswordEncoder,
     private val redisRepository: RedisRepository,
 ) {
@@ -62,28 +60,22 @@ class AuthService(
         val member = memberRepository.findByEmailAndJoinProvider(request.email, JoinProvider.EMAIL)
             ?: throw ApiErrorException(ResponseCodeEnum.INVALID_CREDENTIALS)
 
-        if (member.password == null || !passwordEncoder.matches(request.password, member.password)) {
+        if (member.password == null || !passwordEncoder.matches(
+                request.password,
+                member.password
+            )
+        ) {
             throw ApiErrorException(ResponseCodeEnum.INVALID_CREDENTIALS)
         }
 
         return issue(member.id, member.email, member.joinProvider)
     }
 
-    // Authorization Code + PKCE 로 Access Token 교환 후 로그인/가입 분기 처리
-    fun oauthLoginWithAuthorizationCode(
+    // oauth2Login 콜백 처리 후 기존 회원이면 LOGIN, 신규 회원이면 NEED_SIGN_UP 으로 분기
+    fun oauthLogin(
         provider: JoinProvider,
-        code: String,
-        codeVerifier: String,
-        redirectUri: String,
+        userInfo: OAuthUserInfo
     ): OAuthLoginResponse {
-        val userInfo = oAuthClientResolver
-            .resolve(provider)
-            .getUserInfoByAuthorizationCode(code, codeVerifier, redirectUri)
-
-        return buildOAuthLoginResponse(provider, userInfo)
-    }
-
-    private fun buildOAuthLoginResponse(provider: JoinProvider, userInfo: OAuthUserInfo): OAuthLoginResponse {
         val member = memberRepository.findByProviderIdAndJoinProvider(userInfo.providerId, provider)
 
         return if (member != null) {
@@ -110,7 +102,11 @@ class AuthService(
     fun oauthSignUp(request: OAuthSignUpRequest): AuthTokenResponse {
         val claims = jwtTokenProvider.parseTempToken(request.tempToken)
 
-        if (memberRepository.existsByProviderIdAndJoinProvider(claims.providerId, claims.provider)) {
+        if (memberRepository.existsByProviderIdAndJoinProvider(
+                claims.providerId,
+                claims.provider
+            )
+        ) {
             throw ApiErrorException(ResponseCodeEnum.ALREADY_REGISTERED_OAUTH)
         }
 

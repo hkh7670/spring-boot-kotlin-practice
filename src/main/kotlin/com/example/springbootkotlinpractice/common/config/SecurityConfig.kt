@@ -1,6 +1,10 @@
 package com.example.springbootkotlinpractice.common.config
 
+import com.example.springbootkotlinpractice.common.oauth.CustomOAuth2UserService
+import com.example.springbootkotlinpractice.common.oauth.CustomOidcUserService
 import com.example.springbootkotlinpractice.common.security.JwtAuthenticationFilter
+import com.example.springbootkotlinpractice.domain.auth.service.OAuth2LoginFailureHandler
+import com.example.springbootkotlinpractice.domain.auth.service.OAuth2LoginSuccessHandler
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest
 import org.springframework.context.annotation.Bean
@@ -9,8 +13,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
@@ -24,6 +26,10 @@ class SecurityConfig(
     private val jwtAuthenticationFilter: JwtAuthenticationFilter,
     private val customAccessDeniedHandler: CustomAccessDeniedHandler,
     private val customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
+    private val customOAuth2UserService: CustomOAuth2UserService,
+    private val customOidcUserService: CustomOidcUserService,
+    private val oAuth2LoginSuccessHandler: OAuth2LoginSuccessHandler,
+    private val oAuth2LoginFailureHandler: OAuth2LoginFailureHandler,
     @Value($$"${spring.h2.console.enabled:false}")
     private val h2ConsoleEnabled: Boolean,
 ) {
@@ -40,19 +46,18 @@ class SecurityConfig(
             "/api/v1/auth/email/**",
             "/api/v1/auth/oauth/**",
             "/api/v1/auth/reissue",
+            "/oauth2/**",
+            "/login/oauth2/**",
         )
     }
 
-    @Bean
-    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
-
-    // 로컬 테스트 프론트(oauth-test, http://localhost:8080) 및 배포 도메인의 Swagger UI 에서
+    // 로컬 테스트 프론트(oauth-test, http://localhost:3000) 및 배포 도메인의 Swagger UI 에서
     // fetch 호출을 허용하기 위한 CORS 설정
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration().apply {
             allowedOrigins = listOf(
-                "http://localhost:8080",
+                "http://localhost:3000",
                 "http://hkh7670.iptime.org:8080",
             )
             allowedMethods = listOf("GET", "POST")
@@ -85,6 +90,16 @@ class SecurityConfig(
 //                it.requestMatchers("/api/v1/members/myself-admin").hasRole("ADMIN")
                 // 그 외 전부 인증 필요
                 it.anyRequest().authenticated()
+            }
+            // Google/Kakao/Naver 소셜 로그인. 콜백(/login/oauth2/code/{registrationId})은 백엔드가 직접 받는다
+            .oauth2Login { oauth2 ->
+                oauth2
+                    .userInfoEndpoint {
+                        it.userService(customOAuth2UserService)
+                        it.oidcUserService(customOidcUserService)
+                    }
+                    .successHandler(oAuth2LoginSuccessHandler)
+                    .failureHandler(oAuth2LoginFailureHandler)
             }
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .exceptionHandling { authenticationException ->
