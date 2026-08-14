@@ -74,6 +74,9 @@ dependencies {
     /* Redis */
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
+    /* Kafka */
+    implementation("org.springframework.kafka:spring-kafka")
+
     /* Kotlin Logging */
 //    runtimeOnly("io.github.oshai:kotlin-logging-jvm:8.0.4")
 }

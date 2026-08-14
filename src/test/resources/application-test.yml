@@ -2,6 +2,16 @@ spring:
   config:
     activate:
       on-profile: test
+  # 테스트 환경에는 실제 브로커가 없다. 프로듀서가 메타데이터를 못 가져와도 max.block.ms 만큼만
+  # 기다리고 실패하도록(기본값 60s는 테스트를 그만큼 지연시킬 수 있다) 짧게 잡고,
+  # 컨슈머는 아예 폴링을 시작하지 않도록 auto-startup 을 끈다.
+  kafka:
+    bootstrap-servers: localhost:19092
+    producer:
+      properties:
+        max.block.ms: 2000
+    listener:
+      auto-startup: false
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
     driver-class-name: org.h2.Driver

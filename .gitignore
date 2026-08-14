@@ -47,3 +47,5 @@ out/
 .AppleDouble
 .LSOverride
 
+### ETC ###
+kls_database.db

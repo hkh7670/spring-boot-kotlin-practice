@@ -2,6 +2,8 @@ package com.example.springbootkotlinpractice.domain.payment.service
 
 import com.example.springbootkotlinpractice.common.payment.toss.TossConfirmPaymentResponse
 import com.example.springbootkotlinpractice.domain.order.entity.OrderStatusHistory
+import com.example.springbootkotlinpractice.domain.order.event.OrderCancelledEvent
+import com.example.springbootkotlinpractice.domain.order.event.OrderPaidEvent
 import com.example.springbootkotlinpractice.domain.order.repository.OrderItemRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderStatusHistoryRepository
@@ -13,6 +15,7 @@ import com.example.springbootkotlinpractice.enums.PaymentStatus
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import java.time.OffsetDateTime
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -26,10 +29,14 @@ class PaymentRecordService(
     private val orderStatusHistoryRepository: OrderStatusHistoryRepository,
     private val paymentRepository: PaymentRepository,
     private val productRepository: ProductRepository,
+    private val applicationEventPublisher: ApplicationEventPublisher,
 ) {
 
     @Transactional
-    fun completePayment(orderId: Long, tossResponse: TossConfirmPaymentResponse): PaymentConfirmResponse {
+    fun completePayment(
+        orderId: Long,
+        tossResponse: TossConfirmPaymentResponse
+    ): PaymentConfirmResponse {
         val order = orderRepository.findByIdOrNull(orderId)
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_ORDER)
 
@@ -43,7 +50,18 @@ class PaymentRecordService(
                 amount = tossResponse.totalAmount,
                 status = PaymentStatus.valueOf(tossResponse.status),
                 method = tossResponse.method,
-                approvedAt = tossResponse.approvedAt?.let { OffsetDateTime.parse(it).toLocalDateTime() },
+                approvedAt = tossResponse.approvedAt?.let {
+                    OffsetDateTime.parse(it).toLocalDateTime()
+                },
+            )
+        )
+
+        applicationEventPublisher.publishEvent(
+            OrderPaidEvent(
+                orderId = order.id,
+                orderUid = order.orderUid,
+                memberId = order.memberId,
+                amount = payment.amount
             )
         )
 
@@ -70,5 +88,13 @@ class PaymentRecordService(
         orderItemRepository.findByOrder(order).forEach {
             productRepository.increaseStock(it.product.id, it.count)
         }
+
+        applicationEventPublisher.publishEvent(
+            OrderCancelledEvent(
+                orderId = order.id,
+                orderUid = order.orderUid,
+                memberId = order.memberId
+            )
+        )
     }
 }

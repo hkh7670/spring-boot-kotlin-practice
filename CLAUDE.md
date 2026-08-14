@@ -44,6 +44,11 @@ mise exec -- ./gradlew bootRun --args='--spring.profiles.active=local'
 Toss 키, JWT/AES 시크릿). `.env`에는 각 키를 어떻게 생성했는지 명령어 주석이 달려있다
 (`openssl rand -base64 ...`).
 
+## 포맷팅
+
+IntelliJ에서 Google Style XML을 import해서 사용 중이다. 단, 실제 적용 결과는 한 줄 100자
+제한(전역 120자보다 우선), Kotlin 파일은 4-space 들여쓰기다.
+
 ## 패키지 구조
 
 ```
