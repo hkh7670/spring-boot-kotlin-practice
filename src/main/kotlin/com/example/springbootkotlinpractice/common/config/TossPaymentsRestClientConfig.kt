@@ -64,7 +64,12 @@ class TossPaymentsRestClientConfig(
     private fun tossErrorHandler(): RestClient.ResponseSpec.ErrorHandler {
         return RestClient.ResponseSpec.ErrorHandler { request, response ->
             logExternalError(request, response)
-            throw ApiErrorException(ResponseCodeEnum.PAYMENT_CONFIRM_FAILED)
+            val responseCode = if (request.uri.path.endsWith("/cancel")) {
+                ResponseCodeEnum.PAYMENT_CANCEL_FAILED
+            } else {
+                ResponseCodeEnum.PAYMENT_CONFIRM_FAILED
+            }
+            throw ApiErrorException(responseCode)
         }
     }
 

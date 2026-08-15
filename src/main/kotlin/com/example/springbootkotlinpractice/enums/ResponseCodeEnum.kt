@@ -23,6 +23,9 @@ enum class ResponseCodeEnum(
     PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "1007", "주문 금액과 결제 금액이 일치하지 않습니다."),
     PAYMENT_CONFIRM_FAILED(HttpStatus.BAD_GATEWAY, "1008", "결제 승인에 실패했습니다."),
     ORDER_ALREADY_CANCELLED(HttpStatus.CONFLICT, "1009", "이미 취소된 주문입니다."),
+    ORDER_NOT_PAID(HttpStatus.CONFLICT, "1010", "결제가 완료되지 않아 취소할 수 없는 주문입니다."),
+    PAYMENT_CANCEL_FAILED(HttpStatus.BAD_GATEWAY, "1011", "결제 취소에 실패했습니다."),
+    NOT_FOUND_PAYMENT_INFO(HttpStatus.NOT_FOUND, "1012", "결제 정보가 존재하지 않습니다."),
 
     // Auth Error (4000 ~)
     INVALID_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "4000", "유효하지 않은 JWT Token 입니다."),

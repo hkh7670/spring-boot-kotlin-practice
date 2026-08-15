@@ -59,6 +59,16 @@ class Order(
         status = OrderStatus.CANCELLED
     }
 
+    // 결제 완료(PAID) 주문의 취소(환불) 전용. markCancelled() 는 결제 전(PENDING_PAYMENT) 주문 전용이라
+    // 재사용할 수 없다 (PAID 상태에서 호출하면 ALREADY_PAID_ORDER 를 던진다).
+    fun cancelPaidOrder() {
+        when (status) {
+            OrderStatus.PAID -> status = OrderStatus.CANCELLED
+            OrderStatus.CANCELLED -> throw ApiErrorException(ResponseCodeEnum.ORDER_ALREADY_CANCELLED)
+            OrderStatus.PENDING_PAYMENT -> throw ApiErrorException(ResponseCodeEnum.ORDER_NOT_PAID)
+        }
+    }
+
     private fun validatePendingPayment() {
         when (status) {
             OrderStatus.PAID -> throw ApiErrorException(ResponseCodeEnum.ALREADY_PAID_ORDER)

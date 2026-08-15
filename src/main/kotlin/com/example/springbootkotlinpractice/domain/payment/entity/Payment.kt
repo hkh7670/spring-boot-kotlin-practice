@@ -2,17 +2,9 @@ package com.example.springbootkotlinpractice.domain.payment.entity
 
 import com.example.springbootkotlinpractice.common.entity.BaseTimeEntity
 import com.example.springbootkotlinpractice.enums.PaymentStatus
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.Table
-import jakarta.persistence.UniqueConstraint
-import java.time.LocalDateTime
+import jakarta.persistence.*
 import org.hibernate.annotations.Comment
+import java.time.LocalDateTime
 
 @Entity
 @Table(
@@ -37,6 +29,8 @@ class Payment(
     @Column(name = "amount", nullable = false, updatable = false)
     val amount: Int,
 
+    // 이 필드는 항상 cancel()/done() 같은 이름 있는 메서드를 통해서만 변경한다 (status = X 직접 대입 금지).
+    // Order.status 와 같은 이유로 컴파일 타임 강제(private/protected set)는 적용하지 않는다.
     @Comment("결제 상태")
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
@@ -74,5 +68,13 @@ class Payment(
                 approvedAt = approvedAt,
             )
         }
+    }
+
+    fun cancel() {
+        status = PaymentStatus.CANCELED
+    }
+
+    fun done() {
+        status = PaymentStatus.DONE
     }
 }

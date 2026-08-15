@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository
 interface PaymentRepository : JpaRepository<Payment, Long> {
 
     fun existsByOrderId(orderId: Long): Boolean
+
+    fun findByOrderId(orderId: Long): Payment?
 }

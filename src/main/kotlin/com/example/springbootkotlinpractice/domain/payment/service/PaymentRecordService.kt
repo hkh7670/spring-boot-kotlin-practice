@@ -41,7 +41,9 @@ class PaymentRecordService(
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_ORDER)
 
         order.markPaid()
-        orderStatusHistoryRepository.save(OrderStatusHistory.of(order.id, order.status))
+        orderStatusHistoryRepository.save(
+            OrderStatusHistory.of(order.id, order.status)
+        )
 
         val payment = paymentRepository.save(
             Payment.of(
