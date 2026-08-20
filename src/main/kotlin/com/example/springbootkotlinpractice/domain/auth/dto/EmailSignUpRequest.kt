@@ -1,5 +1,6 @@
 package com.example.springbootkotlinpractice.domain.auth.dto
 
+import com.example.springbootkotlinpractice.common.validation.PasswordPolicy
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.*
 import java.time.LocalDate
@@ -27,9 +28,9 @@ data class EmailSignUpRequest(
     @field:Email
     val email: String,
 
-    @field:Schema(description = "비밀번호")
+    @field:Schema(description = "비밀번호 (영문/숫자/특수문자 포함 10~64자)")
     @field:NotBlank
-    @field:Size(min = 8, max = 64)
+    @field:Pattern(regexp = PasswordPolicy.PATTERN, message = PasswordPolicy.MESSAGE)
     val password: String,
 ) {
     fun validate() {

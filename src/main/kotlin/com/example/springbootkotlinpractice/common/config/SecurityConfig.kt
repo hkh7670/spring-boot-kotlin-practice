@@ -46,6 +46,7 @@ class SecurityConfig(
             "/api/v1/auth/email/**",
             "/api/v1/auth/oauth/**",
             "/api/v1/auth/reissue",
+            "/api/v1/admin/accounts",
             "/oauth2/**",
             "/login/oauth2/**",
         )
@@ -87,7 +88,6 @@ class SecurityConfig(
                 }
                 // Permit All Paths
                 it.requestMatchers(*PERMIT_ALL_PATHS).permitAll()
-//                it.requestMatchers("/api/v1/members/myself-admin").hasRole("ADMIN")
                 // 그 외 전부 인증 필요
                 it.anyRequest().authenticated()
             }

@@ -51,6 +51,8 @@ class PaymentService(
             OrderStatus.PAID -> throw ApiErrorException(ResponseCodeEnum.ALREADY_PAID_ORDER)
             OrderStatus.CANCELLED -> throw ApiErrorException(ResponseCodeEnum.ORDER_ALREADY_CANCELLED)
             OrderStatus.PENDING_PAYMENT -> Unit
+            OrderStatus.SHIPPING, OrderStatus.DELIVERED,
+            OrderStatus.RETURNING, OrderStatus.RETURNED -> throw ApiErrorException(ResponseCodeEnum.ALREADY_PAID_ORDER)
         }
     }
 

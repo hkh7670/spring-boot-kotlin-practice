@@ -1,7 +1,6 @@
 package com.example.springbootkotlinpractice.domain.order.service
 
-import com.example.springbootkotlinpractice.common.payment.toss.TossCancelPaymentRequest
-import com.example.springbootkotlinpractice.common.payment.toss.TossPaymentsApi
+import com.example.springbootkotlinpractice.common.payment.toss.TossPaymentCanceller
 import com.example.springbootkotlinpractice.domain.order.dto.OrderCancelResponse
 import com.example.springbootkotlinpractice.domain.order.entity.Order
 import com.example.springbootkotlinpractice.domain.order.event.OrderCancelledEvent
@@ -23,7 +22,7 @@ class OrderCancelService(
     private val orderRepository: OrderRepository,
     private val paymentRepository: PaymentRepository,
     private val orderCancelRecordService: OrderCancelRecordService,
-    private val tossPaymentsApi: TossPaymentsApi,
+    private val tossPaymentCanceller: TossPaymentCanceller,
     private val orderEventPublisher: OrderEventPublisher,
 ) {
 
@@ -37,17 +36,7 @@ class OrderCancelService(
         val payment = getPayment(order.id)
 
         // Toss 결제 취소 API 호출
-        runCatching {
-            tossPaymentsApi.cancelPayment(
-                payment.paymentKey,
-                TossCancelPaymentRequest(cancelReason = CANCEL_REASON)
-            )
-        }.onFailure {
-            if (it is ApiErrorException) {
-                throw it
-            }
-            throw ApiErrorException(ResponseCodeEnum.PAYMENT_CANCEL_FAILED)
-        }
+        tossPaymentCanceller.cancel(payment.paymentKey, CANCEL_REASON)
 
         // 결제 취소완료 후 DB 반영 (재고 원복)
         orderCancelRecordService.markCancelled(order.id)
@@ -80,6 +69,8 @@ class OrderCancelService(
             OrderStatus.PAID -> Unit
             OrderStatus.CANCELLED -> throw ApiErrorException(ResponseCodeEnum.ORDER_ALREADY_CANCELLED)
             OrderStatus.PENDING_PAYMENT -> throw ApiErrorException(ResponseCodeEnum.ORDER_NOT_PAID)
+            OrderStatus.SHIPPING, OrderStatus.DELIVERED,
+            OrderStatus.RETURNING, OrderStatus.RETURNED -> throw ApiErrorException(ResponseCodeEnum.ORDER_ALREADY_SHIPPING)
         }
     }
 

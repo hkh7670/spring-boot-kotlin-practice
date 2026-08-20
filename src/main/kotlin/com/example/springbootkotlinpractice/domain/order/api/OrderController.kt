@@ -7,7 +7,9 @@ import com.example.springbootkotlinpractice.domain.order.dto.OrderCancelResponse
 import com.example.springbootkotlinpractice.domain.order.dto.OrderCreateRequest
 import com.example.springbootkotlinpractice.domain.order.dto.OrderCreateResponse
 import com.example.springbootkotlinpractice.domain.order.dto.OrderDetailResponse
+import com.example.springbootkotlinpractice.domain.order.dto.OrderStatusResponse
 import com.example.springbootkotlinpractice.domain.order.service.OrderCancelService
+import com.example.springbootkotlinpractice.domain.order.service.OrderReturnService
 import com.example.springbootkotlinpractice.domain.order.service.OrderService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.*
 class OrderController(
     private val orderService: OrderService,
     private val orderCancelService: OrderCancelService,
+    private val orderReturnService: OrderReturnService,
 ) {
 
     @PreAuthorize("hasRole('USER')")
@@ -49,6 +52,16 @@ class OrderController(
         @PathVariable orderId: Long,
     ): ResponseEntity<CommonResponse<OrderCancelResponse>> {
         val response = orderCancelService.cancelOrder(userPrincipal.id, orderId)
+        return ResponseHandler.ok(response)
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    @PostMapping("/{orderId}/return")
+    fun requestReturn(
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
+        @PathVariable orderId: Long,
+    ): ResponseEntity<CommonResponse<OrderStatusResponse>> {
+        val response = orderReturnService.requestReturn(userPrincipal.id, orderId)
         return ResponseHandler.ok(response)
     }
 }

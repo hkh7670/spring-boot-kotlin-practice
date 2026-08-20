@@ -1,3 +1,19 @@
+CREATE TABLE admins
+(
+    id                 BIGINT AUTO_INCREMENT COMMENT '관리자 고유 식별자'
+        PRIMARY KEY,
+    name               VARCHAR(100)                NOT NULL COMMENT '이름 (AES 암호화 저장)',
+    email              VARCHAR(100)                NOT NULL COMMENT '이메일 (AES 암호화 저장)',
+    password           VARCHAR(100)                NOT NULL COMMENT '비밀번호 (BCrypt 해시)',
+    status             VARCHAR(20) DEFAULT 'ACTIVE' NOT NULL COMMENT '계정 상태 (ACTIVE/INACTIVE/WITHDRAWN)',
+    withdrawn_datetime DATETIME(6)                  NULL COMMENT '탈퇴 일시 (개인정보 파기 배치 기준일)',
+    created_datetime   DATETIME(6)                  NOT NULL,
+    updated_datetime   DATETIME(6)                  NOT NULL,
+    CONSTRAINT uq_admins_01
+        UNIQUE (email)
+)
+    COMMENT '관리자 정보';
+
 CREATE TABLE categories
 (
     id               BIGINT AUTO_INCREMENT

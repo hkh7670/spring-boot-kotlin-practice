@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 
 @Service
-@Transactional
 class AuthService(
     private val memberRepository: MemberRepository,
     private val jwtTokenProvider: JwtTokenProvider,
@@ -36,6 +35,7 @@ class AuthService(
     }
 
     // 가입경로에 맞춰 회원 생성 후 토큰 발급
+    @Transactional
     fun signUp(request: EmailSignUpRequest, joinProvider: JoinProvider): AuthTokenResponse {
         if (memberRepository.existsByEmailAndJoinProvider(request.email, joinProvider)) {
             throw ApiErrorException(ResponseCodeEnum.DUPLICATED_EMAIL)
@@ -72,6 +72,7 @@ class AuthService(
     }
 
     // oauth2Login 콜백 처리 후 기존 회원이면 LOGIN, 신규 회원이면 NEED_SIGN_UP 으로 분기
+    @Transactional(readOnly = true)
     fun oauthLogin(
         provider: JoinProvider,
         userInfo: OAuthUserInfo
@@ -99,6 +100,7 @@ class AuthService(
     }
 
     // tempToken + 추가 정보로 OAuth 회원가입 후 JWT 발급
+    @Transactional
     fun oauthSignUp(request: OAuthSignUpRequest): AuthTokenResponse {
         val claims = jwtTokenProvider.parseTempToken(request.tempToken)
 

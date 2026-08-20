@@ -26,6 +26,14 @@ enum class ResponseCodeEnum(
     ORDER_NOT_PAID(HttpStatus.CONFLICT, "1010", "결제가 완료되지 않아 취소할 수 없는 주문입니다."),
     PAYMENT_CANCEL_FAILED(HttpStatus.BAD_GATEWAY, "1011", "결제 취소에 실패했습니다."),
     NOT_FOUND_PAYMENT_INFO(HttpStatus.NOT_FOUND, "1012", "결제 정보가 존재하지 않습니다."),
+    ORDER_NOT_SHIPPABLE(HttpStatus.CONFLICT, "1013", "결제 완료 상태의 주문만 배송을 시작할 수 있습니다."),
+    ORDER_NOT_SHIPPING(HttpStatus.CONFLICT, "1014", "배송중 상태의 주문만 배송완료 처리할 수 있습니다."),
+    ORDER_ALREADY_SHIPPING(HttpStatus.CONFLICT, "1015", "이미 배송이 시작되어 취소할 수 없는 주문입니다."),
+    ORDER_NOT_DELIVERED(HttpStatus.CONFLICT, "1016", "배송완료된 주문만 반품을 요청할 수 있습니다."),
+    ORDER_NOT_RETURNING(HttpStatus.CONFLICT, "1017", "반품중 상태의 주문만 반품완료 처리할 수 있습니다."),
+    ADMIN_ALREADY_WITHDRAWN(HttpStatus.CONFLICT, "1018", "이미 탈퇴한 관리자입니다."),
+    ADMIN_ALREADY_INACTIVE(HttpStatus.CONFLICT, "1019", "이미 휴면 상태인 관리자입니다."),
+    ADMIN_NOT_INACTIVE(HttpStatus.CONFLICT, "1020", "휴면 상태의 관리자만 활성화할 수 있습니다."),
 
     // Auth Error (4000 ~)
     INVALID_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "4000", "유효하지 않은 JWT Token 입니다."),

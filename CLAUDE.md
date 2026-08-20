@@ -1,196 +1,168 @@
 # spring-boot-kotlin-practice
 
-Kotlin + Spring Boot 3 학습/실습용 프로젝트. OAuth 로그인, JWT 인증, 주문/결제(Toss Payments) 도메인을
-직접 구현하며 Spring 생태계를 익히는 것이 목적이다.
+Kotlin + Spring Boot 3 학습/실습용 프로젝트. OAuth 로그인, JWT 인증, 주문/결제(Toss Payments), Kafka
+이벤트 발행을 직접 구현하며 Spring 생태계를 익히는 것이 목적이다.
 
 ## 기술 스택
 
-- Kotlin 2.4.10 / Java 21 toolchain (Gradle Kotlin DSL, `kotlin("plugin.spring")`, `kotlin("plugin.jpa")`, `kapt`)
-- Spring Boot 3.5.16 (`spring-boot-starter-web`, `-data-jpa`, `-security`, `-validation`, `-data-redis`)
-- DB: MySQL(운영/dev), H2(local/test) — QueryDSL(OpenFeign jakarta 포크, `querydsl-jpa` 7.4.0)
-- 인증: JWT(`jjwt` 0.13.x, HMAC) + Redis(refresh token rotation) + Spring Security
-- 외부 연동: Google/Kakao/Naver OAuth(PKCE), Toss Payments
-- API 문서: springdoc-openapi (`/swagger.html`, `/api-docs`)
+- Kotlin 2.4.10 / Java 21 (`kotlin("plugin.spring")`, `kotlin("plugin.jpa")`, `kapt`), Gradle Kotlin DSL
+- Spring Boot 3.5.16 (web, data-jpa, security, validation, data-redis)
+- DB: MySQL(운영/dev), H2(local/test) — QueryDSL(OpenFeign jakarta 포크)
+- 인증: JWT(`jjwt`, HMAC) + Redis(refresh token rotation) + Spring Security
+- 외부 연동: Google/Kakao/Naver OAuth(PKCE), Toss Payments, Spring Kafka(외부 Docker 브로커)
+- API 문서: springdoc-openapi (`/swagger.html`)
 - ULID(`ulid-creator`) — 외부 노출용 식별자(`orderUid` 등)
 
 ## 빌드 / 실행
 
-**중요: 이 프로젝트는 `mise.toml`로 `java = temurin-21`을 고정한다. 에이전트 Bash 세션은 mise가 자동
-활성화되지 않을 수 있으므로, Gradle 명령은 항상 `mise exec --`를 앞에 붙여 실행한다.**
+**Gradle 명령은 항상 `mise exec --`를 앞에 붙인다** (`mise.toml`이 `java = temurin-21` 고정, 안 붙이면
+앰비언트 JDK와 버전이 어긋나 `kotlin("plugin.spring")`이 크래시한다).
 
 ```bash
-mise exec -- ./gradlew compileKotlin compileTestKotlin   # 컴파일만
-mise exec -- ./gradlew test                              # 전체 테스트 (H2, profile=test)
+mise exec -- ./gradlew compileKotlin compileTestKotlin
+mise exec -- ./gradlew test
 mise exec -- ./gradlew bootRun --args='--spring.profiles.active=local'
 ```
 
-이걸 생략하면 앰비언트 JDK(예: temurin-25)와 버전이 어긋나 `kotlin("plugin.spring")` 컴파일러가
-`JavaVersion.parse` 단계에서 크래시한다 (`IllegalArgumentException: 25.0.3` 형태의 에러).
-
-### 프로파일 (`src/main/resources/application-*.yml`)
-
-| 프로파일 | 용도 | DB | `ddl-auto` |
-|---|---|---|---|
-| `local` | 로컬 개발 | 외부 MySQL (`.env`) | `none` (수동 DDL) |
-| `dev` | 무중단 배포 서버 (맥미니, `hkh7670.iptime.org:8080`) | 외부 MySQL | `none` |
-| `mysql` | MySQL 전용 설정 조각 (local/dev가 참조) | 외부 MySQL | `none` |
-| `h2` | 로컬 인메모리 실행 | H2 (`MODE=MySQL`) | `create-drop` |
-| `test` | 테스트 실행 (`src/test/resources/application-test.yml`) | H2 인메모리 | `create-drop` |
-
-`local`/`dev`/`mysql` 프로파일은 `ddl-auto: none`이라 스키마 변경 시 **`ddl.sql`을 사람이 직접 실행**해야
-한다 (아래 "DB 스키마" 참고). `h2`/`test`는 엔티티로부터 매 실행마다 스키마를 자동 생성한다.
-
-민감정보는 `.env`에 있고 gitignore 되어 있다 (DB 접속정보, OAuth client secret, Redis 비밀번호,
-Toss 키, JWT/AES 시크릿). `.env`에는 각 키를 어떻게 생성했는지 명령어 주석이 달려있다
-(`openssl rand -base64 ...`).
+프로파일: `local`/`dev`/`mysql`은 외부 MySQL + `ddl-auto: none`(스키마 변경 시 `ddl.sql`을 사람이
+직접 실행). `h2`/`test`는 H2 + `create-drop`(자동 스키마, 배포 DB 반영 확인 수단 아님). 민감정보는
+gitignore된 `.env`.
 
 ## 포맷팅
 
-IntelliJ에서 Google Style XML을 import해서 사용 중이다. 단, 실제 적용 결과는 한 줄 100자
-제한(전역 120자보다 우선), Kotlin 파일은 4-space 들여쓰기다.
+IntelliJ Google Style XML import. 실제 적용 결과는 한 줄 100자(전역 120자보다 우선), Kotlin 4-space 들여쓰기.
 
 ## 패키지 구조
 
 ```
-common/            도메인에 종속되지 않는 공통 코드
-  config/          @ConfigurationProperties, SecurityConfig, SwaggerConfig, Redis/OAuth/Toss 설정
-  security/        JwtTokenProvider, JwtAuthenticationFilter, UserPrincipal
-  oauth/{google,kakao,naver}/  Provider별 OAuthClient + TokenApi + OAuthApi (Feign 스타일 인터페이스)
-  redis/           RedisRepository (StringRedisTemplate 얇은 래퍼)
-  converter/       Aes256Converter (JPA @Convert, PII 컬럼 암호화)
-  utils/           AesCryptoUtil
-  dto/             CommonResponse, ResponseHandler (API 공통 응답 포맷)
-  entity/          BaseTimeEntity (createdDatetime/updatedDatetime, @EntityListeners auditing)
+common/            도메인 무관 공통 코드 (config, security(JWT), oauth/{google,kakao,naver},
+                    payment/toss(TossPaymentsApi, TossPaymentCanceller), redis, converter(AES),
+                    dto(CommonResponse), entity(BaseTimeEntity))
 domain/
-  auth/            로그인/회원가입/토큰 재발급 (EMAIL, OAuth 공통)
+  auth/            로그인/회원가입/토큰 재발급
   member/          회원 조회
-  order/           주문 생성/조회, 주문 상태 이력, 만료 주문 취소 배치
-  payment/         Toss Payments 결제 승인
-  product/         상품 (엔티티/레포지토리만, 컨트롤러 없음 — 시딩은 H2 콘솔로)
+  order/           주문 생성/조회/취소/반품, 배송 상태 전환, 상태 이력, 만료 주문 취소 배치
+    api/           OrderController(사용자), AdminOrderController(관리자: 배송/반품완료)
+    event/         OrderPaidEvent/OrderCancelledEvent + Publisher/Relay/Listener (Kafka)
+    service/       OrderService, OrderCancelService(+RecordService), OrderReturnService(+RecordService),
+                    OrderShippingService
+  payment/         Toss 결제 승인/취소
+  product/         상품 (엔티티/레포지토리만)
   delivery/        배송 옵션 (엔티티/레포지토리만)
-enums/             전역 enum (ResponseCodeEnum, OrderStatus, PaymentStatus, JoinProvider, Role, TokenType)
-exception/         ApiErrorException, ApiCommonAdvice(@RestControllerAdvice), ErrorInfo
+enums/             ResponseCodeEnum, OrderStatus, PaymentStatus, JoinProvider, Role, TokenType
+exception/         ApiErrorException, ApiCommonAdvice
 ```
 
-각 도메인 패키지는 `api/ dto/ entity/ repository/ service/` 하위 구조를 따른다 (있는 것만).
-Controller → Service → Repository 레이어를 엄격히 지키고, Entity를 API 응답에 직접 노출하지 않는다
-(항상 DTO로 변환).
+각 도메인은 `api/dto/entity/repository/service` 구조. Controller → Service → Repository 레이어 엄격
+준수, Entity를 API 응답에 직접 노출하지 않음(DTO 변환).
 
 ## 공통 컨벤션
 
-- **엔티티 생성은 companion object의 `of()` / `ofOAuth()` 팩토리 메서드**를 통해서만 한다 (public
-  생성자를 직접 호출하지 않음). 예: `Member.of(...)`, `Order.of(...)`, `Payment.of(...)`.
-- **에러는 `ApiErrorException(ResponseCodeEnum.XXX)`로 던진다.** 도메인 검증 실패를 `check()`/`require()`로
-  처리하지 않는다 — `ApiCommonAdvice`가 `ResponseCodeEnum`의 `httpStatus`/`resultCode`/`resultMsg`를
-  일관된 `CommonResponse` 포맷으로 변환해준다.
-- **PII(이름/전화번호/이메일)는 `@Convert(converter = Aes256Converter::class)`로 저장 시 자동 암호화된다.**
-  IV가 고정이라 결정적(deterministic) 암호화이며, 이는 암호화된 컬럼으로 `WHERE` 동등 조회(로그인 등)를
-  하기 위한 의도된 트레이드오프다 — "취약점"으로 보고 임의로 랜덤 IV로 바꾸지 말 것.
-  비밀번호(`Member.password`)는 AES가 아니라 BCrypt 해시로 별도 저장한다.
-- **모든 엔티티는 `BaseTimeEntity`를 상속**해 `createdDatetime`/`updatedDatetime`을 자동 관리한다
-  (`@EnableJpaAuditing` 필요, 메인 애플리케이션 클래스에 설정됨).
-- **FK 성격의 컬럼/필드명은 참조 테이블명(단수형) + `_id`** 컨벤션을 따른다 (`order_id`,
-  `product_id`, `delivery_option_id`, `member_id`).
-- **Spring Data 파생 쿼리 메서드명은 엔티티의 Kotlin 프로퍼티명과 정확히 일치해야 한다** (DB 컬럼명이
-  아니라). 예를 들어 `OrderItem`은 `@ManyToOne val order: Order`(컬럼명 `order_id`) 관계를 가지므로
-  파생 쿼리는 `findByOrderId`(중첩 프로퍼티 경로 `order.id`)로 작성한다 — 프로퍼티 경로와 다르게 쓰면
-  `PropertyReferenceException`으로 Spring 컨텍스트 자체가 기동 실패하고, 컨텍스트를 공유하는 모든
-  `@SpringBootTest` 테스트가 도미노로 실패한다.
-- 컬렉션/문자열 null-or-empty 체크는 `CollectionUtils.isEmpty()`/`StringUtils.hasText()` 사용(전역
-  CLAUDE.md 규칙), `!!` 사용 금지.
+- 엔티티 생성은 companion object의 `of()`/`ofOAuth()` 팩토리로만 (public 생성자 직접 호출 금지).
+- 에러는 `ApiErrorException(ResponseCodeEnum.XXX)`로 던진다 (`check()`/`require()` 대신).
+- PII(이름/전화번호/이메일)는 `@Convert(Aes256Converter)`로 결정적 암호화(고정 IV, `WHERE` 동등조회용
+  — 취약점 아니라 의도된 트레이드오프, 랜덤 IV로 바꾸지 말 것). 비밀번호는 BCrypt.
+- 모든 엔티티는 `BaseTimeEntity` 상속.
+- FK 컬럼/필드명은 `참조테이블명(단수) + _id`.
+- Spring Data 파생 쿼리 메서드명은 **DB 컬럼명이 아니라 Kotlin 프로퍼티 경로**와 일치해야 한다 (틀리면
+  `PropertyReferenceException`으로 컨텍스트 기동 자체가 실패, `@SpringBootTest` 전체 도미노 실패).
+- null/empty 체크는 `CollectionUtils.isEmpty()`/`StringUtils.hasText()`, `!!` 금지.
+- 상태값(`Order.status`, `Payment.status`)은 컴파일타임 강제(`private set`)가 아니라 평범한 public
+  `var`다 — Kotlin 주 생성자 프로퍼티는 커스텀 접근자를 문법적으로 붙일 수 없기 때문. 대신 항상 이름
+  있는 메서드(`markPaid()`, `cancelPaidOrder()`, `cancel()`, `done()` 등)로만 변경하는 컨벤션으로 대체.
 
 ## 인증/인가 (`domain/auth`, `common/security`)
 
-- **가입 경로 2가지**: EMAIL(비밀번호, BCrypt) / OAuth(GOOGLE·KAKAO·NAVER, PKCE). 회원 조회 유니크
-  제약은 `(provider_id, join_provider)`와 `(email, join_provider)` 조합이라, OAuth와 EMAIL로 같은
-  이메일을 각각 가입할 수 있다.
-- **OAuth는 세 Provider 모두 Authorization Code + PKCE로 통일**되어 있다 (Kakao/Naver는 PKCE 미지원이라
-  대신 서버가 보관하는 `client_secret`으로 보호). 흐름은 `docs/oauth-pkce-login.md` 참고 — 단, 그 문서는
-  구 패키지 구조(`member` 도메인) 기준으로 쓰여져 API 베이스 경로가 `/api/v1/members/oauth`로 남아있다.
-  **실제 현재 경로는 `/api/v1/auth/oauth`** (도메인 재구성 이후 변경됨, 문서 미반영 상태).
-- **토큰 3종류** (`TokenType`): `ACCESS_TOKEN`(30분), `REFRESH_TOKEN`(14일), `TEMP_TOKEN`(10분, OAuth
-  신규가입 중간 단계). `JwtAuthenticationFilter`는 **`ACCESS_TOKEN` 타입일 때만** 인증 컨텍스트를
-  채운다 — REFRESH/TEMP 토큰을 Bearer로 잘못 보내면 그냥 인증되지 않은 요청으로 처리된다(500이 아님).
-- **Refresh Token Rotation**: `AuthService.issue()`가 발급할 때마다 Redis(`refresh-token:{memberId}`,
-  TTL=refreshTokenValidityMs)에 최신 토큰을 덮어쓴다. `reissue()`는 요청받은 refreshToken이 Redis에
-  저장된 것과 다르면 이미 폐기된 토큰의 재사용(탈취 의심)으로 간주해 Redis 키를 삭제하고 401을 던진다
-  (강제 로그아웃). 회원당 세션 1개만 유지되는 모델이다.
-- JWT 서명키는 `jwtProperties.secret`을 **UTF-8 바이트 그대로** 사용한다 (AES와 달리 base64 디코딩
-  안 함). `AesCryptoUtil`은 반대로 `Base64.getDecoder().decode(...)`를 거친다 — 둘을 혼동하지 말 것.
+- 가입 경로 2가지: EMAIL(BCrypt) / OAuth(GOOGLE·KAKAO·NAVER, PKCE 통일 — Kakao/Naver는 서버 보관
+  `client_secret`으로 대체). 유니크 제약이 `(provider_id, join_provider)`+`(email, join_provider)`라
+  같은 이메일을 OAuth/EMAIL 각각 가입 가능.
+- 실제 OAuth API 경로는 `/api/v1/auth/oauth` (`docs/oauth-pkce-login.md`는 구 경로로 미반영 상태).
+- 토큰 3종(`TokenType`): ACCESS(30분)/REFRESH(14일)/TEMP(10분, OAuth 신규가입 중간단계).
+  `JwtAuthenticationFilter`는 ACCESS_TOKEN일 때만 인증 컨텍스트를 채운다.
+- Refresh Token Rotation: Redis에 최신 토큰만 유지(회원당 세션 1개), 재사용 감지 시 강제 로그아웃(401).
+- JWT 서명키는 `secret`을 UTF-8 바이트 그대로 사용 (AES 쪽 `AesCryptoUtil`은 base64 디코딩 — 혼동 주의).
 
-## 주문/결제 (`domain/order`, `domain/payment`)
+## 주문 상태 머신 (`OrderStatus`)
 
-- **재고 차감은 조건부 UPDATE로 원자적으로 처리** (`ProductRepository.decreaseStock`,
-  `WHERE stock_count >= :count`) — 동시 주문에 의한 초과 판매 방지. 영향받은 row가 0이면
-  `NOT_ENOUGH_STOCK`.
-- **가격 스냅샷**: `OrderItem.price`(상품 가격), `Order.deliveryPrice`(배송비)는 주문
-  시점 값을 스냅샷으로 저장한다. `products.price`/`delivery_options.price`는 이후 관리자가 바꿀 수
-  있으므로, 주문 조회/결제 금액 검증 시 **절대 라이브 조회값을 다시 계산에 쓰지 않는다** — 반드시
-  `orders`/`order_items`에 저장된 스냅샷을 사용한다.
-- **주문 상태 이력**: `OrderStatusHistory`가 `Order.status`가 바뀔 때마다(생성 시
-  `PENDING_PAYMENT`, 결제완료 `PAID`, 취소 `CANCELLED`) append-only로 쌓인다. FK 제약은 의도적으로
-  걸지 않았다.
-- **만료 주문 자동 취소**: `StaleOrderCancelScheduler`가 10분마다(`@Scheduled(cron = "0 */10 * * * *")`)
-  생성된 지 10분 넘은 `PENDING_PAYMENT` 주문을 찾아 취소 + 재고 복구한다 (`@EnableScheduling` 필요,
-  메인 애플리케이션 클래스에 설정됨).
-- **결제(Toss) 확정은 외부 API 호출과 DB 쓰기를 서비스 단위로 분리**했다:
-  - `PaymentService`: 검증(소유자/상태/금액) → Toss API 호출 → 결과에 따라 `PaymentRecordService`
-    위임. `@Transactional`을 걸지 않는다 — 트랜잭션 안에서 느릴 수 있는 외부 HTTP 호출을 하면 DB
-    커넥션을 오래 붙잡아 커넥션 풀 고갈 위험이 있기 때문.
-  - `PaymentRecordService`: `completePayment()`/`cancelOrderAndRestoreStock()`가 각각 별도
-    `@Transactional`. **반드시 별도 Spring 빈으로 분리되어 있어야** `PaymentService`에서 호출할 때
-    프록시를 통과해 트랜잭션이 실제로 적용된다 (Kotlin `kotlin("plugin.spring")`이 `@Service` 클래스를
-    자동으로 open 처리해 CGLIB 프록시가 가능해짐). 같은 클래스 내부 self-invocation으로 합치면
-    `@Transactional`이 조용히 무시된다 — 절대 두 서비스를 하나로 합치지 말 것.
-  - `cancelOrderAndRestoreStock()`은 결제 실패 취소와 만료 주문 배치 취소 양쪽에서 재사용된다.
+```
+PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
+       ↓            ↓
+   CANCELLED    CANCELLED
+```
+
+`CANCELLED`는 `PENDING_PAYMENT`/`PAID`에서만 가능 — 배송 시작(`SHIPPING` 이상) 후에는 결제취소 불가
+(`ORDER_ALREADY_SHIPPING`), 배송완료 후 환불은 반품 절차(`RETURNING`→`RETURNED`)로만. 모든 전이는
+`Order` 엔티티의 이름 있는 메서드를 통하고, 각 메서드가 허용 안 되는 현재 상태를 예외로 막는다.
+
+## 주문취소/반품 — Toss 호출 먼저, DB는 성공 후에
+
+`OrderCancelService.cancelOrder()`(사용자, PAID→CANCELLED)와 `OrderReturnService.completeReturn()`
+(관리자, RETURNING→RETURNED) 둘 다 **Toss 취소 API 성공 후에만 DB 반영**한다 — 재고복구를 먼저
+해버리면 그 사이 다른 주문이 그 재고를 선점해, Toss 실패 시 되돌릴 재고가 없어지는 문제 때문에
+(DB-first + 보정 방식을 검토 후 기각). `PaymentService.confirmPayment()`(결제승인)도 동일 순서.
+
+- `common/payment/toss/TossPaymentCanceller`: Toss 취소 호출 + 에러처리(`PAYMENT_CANCEL_FAILED`)를
+  모은 공용 컴포넌트. 새 취소성 플로우 추가 시 반드시 이걸 재사용.
+- 각 흐름은 "검증+외부호출" 서비스와 "DB 기록 전용" 서비스로 분리 (Toss 성공 후에만 record 서비스
+  호출 → 보정 로직 불필요): `OrderCancelService`→`OrderCancelRecordService`,
+  `OrderReturnService.completeReturn()`→`OrderReturnRecordService`. `requestReturn()`(사용자,
+  DELIVERED→RETURNING)과 `OrderShippingService`는 외부호출이 없어 각각 단일 `@Transactional`.
+- Payment 조회보다 **상태 검증을 먼저** 해야 한다 — 안 그러면 `PENDING_PAYMENT`(Payment 미존재) 취소
+  시도가 `NOT_FOUND_ORDER`로 잘못 응답한다 (`ORDER_NOT_PAID`가 맞음).
+
+## 주문/결제 기타 컨벤션
+
+- 재고 차감/복구는 조건부 UPDATE(`decreaseStock`/`increaseStock`)로 원자적 처리, 초과판매 방지.
+- 가격은 주문 시점 스냅샷(`OrderItem.price`, `Order.deliveryPrice`) 사용 — 라이브 조회값 재계산 금지.
+- `OrderStatusHistory`가 모든 상태 전이를 append-only로 기록 (FK 제약 의도적으로 없음).
+- `StaleOrderCancelScheduler`가 10분마다 생성 10분 초과 `PENDING_PAYMENT` 주문을 취소+재고복구.
+- 결제(Toss) 확정은 외부호출(`PaymentService`, `@Transactional` 없음)과 DB쓰기(`PaymentRecordService`,
+  별도 빈 필수 — self-invocation은 `@Transactional` 무시됨)를 분리. `cancelOrderAndRestoreStock()`은
+  결제실패 취소/만료주문 배치취소 공용.
+
+## Kafka (`domain/order/event`)
+
+`order.paid`/`order.cancelled` 토픽에 발행 (`.env`의 `KAFKA_BOOTSTRAP_SERVERS`).
+
+- `@Transactional` 메서드 내부(`PaymentRecordService`)에서는 `ApplicationEventPublisher.publishEvent()`로
+  일반 이벤트만 발행 → `OrderEventRelay`가 `@TransactionalEventListener(AFTER_COMMIT)`로 받아 실제 Kafka
+  발행 (롤백 시 발행 안 됨). 이미 트랜잭션 밖인 코드(`OrderCancelService`)는 `OrderEventPublisher`를 직접 호출.
+- `OrderEventPublisher.send()`는 실패를 절대 상위로 전파하지 않는다(`kafkaTemplate.send()` 자체 호출과
+  `whenComplete` 콜백 양쪽 다 `runCatching`) — AFTER_COMMIT 경로는 Spring이 예외를 삼켜주지만, 직접
+  호출 경로는 안 삼켜서 브로커 장애가 이미 성공한 API를 500으로 만들 수 있었기 때문.
+- 새 프로젝트에서 같은 브로커를 다른 `group-id`로 구독하면 독립적으로 전체 스트림 수신 가능 (같은
+  group-id면 경쟁 컨슈머). 이벤트 DTO 구조가 양쪽에서 일치해야 함.
+- 테스트에서는 `listener.auto-startup: false` + `max.block.ms: 2000`로 브로커 없이도 빠르게 기동.
 
 ## DB 스키마 (`ddl.sql`)
 
-프로젝트 루트의 `ddl.sql`이 스키마의 단일 소스다. 기본적으로 **완전히 새로운 DB에 처음 구축한다는
-전제로 작성**한다 — 전체 `CREATE TABLE` 문이 항상 최신 스키마를 그대로 반영하며, 과거 변경 이력을
-위한 중복 `CREATE TABLE`은 남기지 않는다.
-
-**신규 테이블 추가**는 앞부분에 `CREATE TABLE` 하나만 작성하면 된다 — 아직 어떤 DB에도 존재하지
-않는 테이블이라 별도 `ALTER` 문이 필요 없다.
-
-**기존 테이블에 컬럼/인덱스를 추가하는 경우**에는 이미 운영 중인 DB에는 `CREATE TABLE`을 다시 실행할
-수 없으므로, 파일 끝에 해당 변경만을 위한 `ALTER TABLE`/`CREATE INDEX` 문을 별도로 작성한다(앞부분
-`CREATE TABLE`에는 물론 최종 컬럼까지 전부 포함시킨다).
-
-**엔티티를 바꿀 때마다 `ddl.sql`도 최신 상태로 갱신해야 한다** — `local`/`dev`/`mysql` 프로파일은
-`ddl-auto: none`이라 Hibernate가 스키마를 자동으로 맞춰주지 않는다. (`h2`/`test`만 `create-drop`으로
-매번 자동 반영되므로 테스트 통과만으로 배포 DB 반영을 확인했다고 착각하지 말 것.)
+프로젝트 루트 `ddl.sql`이 스키마 단일 소스, 항상 "새 DB 최초 구축" 전제로 최신 `CREATE TABLE`만 유지.
+신규 테이블은 `CREATE TABLE` 추가만. 기존 테이블 컬럼/인덱스 추가는 파일 끝에 별도 `ALTER TABLE` 추가
+(단, 앞부분 `CREATE TABLE`도 최종 컬럼까지 반영). 엔티티 변경 시 `ddl.sql`도 항상 같이 갱신할 것 —
+`local`/`dev`는 `ddl-auto: none`이라 자동 반영 안 됨.
 
 ## 테스트
 
-- `src/test/kotlin/.../domain/*/api/*ControllerTest.kt`: `MockMvc` + 실제 H2 레포지토리 조합의 통합
-  테스트. 외부 API만 `@MockitoBean`으로 목킹한다 (예: `TossPaymentsApi`, OAuth Provider 클라이언트).
-  Redis도 테스트 환경에 실제 서버가 없으므로 Redis에 쓰는 서비스(`AuthService` 등)를 거치는 테스트는
-  `RedisRepository`를 `@MockitoBean`으로 대체한다.
-- 테스트는 `profile=test` (`src/test/resources/application-test.yml`), H2 인메모리 + `create-drop`.
-- 커버리지가 얇은 영역(향후 보강 필요, 특별히 요청받기 전에는 먼저 손대지 않기): `AuthService`의
-  reissue/rotation 로직, `AuthEmailController`의 login/signup.
+- `*ControllerTest.kt`: `MockMvc` + 실제 H2 통합 테스트. 외부 API(`TossPaymentsApi`, OAuth 클라이언트)와
+  `RedisRepository`만 `@MockitoBean`. `profile=test`, H2 + `create-drop`.
+- 결제완료 주문 픽스처는 `productRepository.decreaseStock()`(벌크쿼리)를 트랜잭션 밖에서 직접 호출하면
+  `TransactionRequiredException` → `product.stockCount` 직접 감소+save 헬퍼(`createPaidOrder`) 사용.
+- **테스트 공백** (향후 보강 필요, 요청 전엔 먼저 손대지 않기): `AuthService` reissue/rotation,
+  `AuthEmailController` login/signup, `OrderShippingService`/`OrderReturnService` 전체(구현만 하고
+  비용 문제로 테스트 미작성).
 
 ## 배포
 
-- 로컬: `mise exec -- ./gradlew bootRun` 또는 `--spring.profiles.active=local` (port 16000).
-- 운영: 맥미니 자가 호스팅, `http://hkh7670.iptime.org:8080`, `dev` 프로파일, nginx 리버스 프록시
-  뒤에서 무중단 배포. `server.forward-headers-strategy: framework`가 설정되어 있어 프록시 뒤에서도
-  스킴/호스트를 올바르게 인식한다.
-- **CORS**는 `SecurityConfig.corsConfigurationSource()`의 `allowedOrigins`에 화이트리스트로 등록된
-  origin만 허용한다 (`/api/v1/**`에 적용). 새 프론트엔드/배포 도메인을 추가할 때마다 여기에 추가해야
-  한다 — 안 하면 브라우저에서 `403 Invalid CORS request`가 발생한다 (동일 origin에서 호출하는 경우,
-  예: `localhost:16000`에서 그 자신의 Swagger UI를 호출하는 경우는 CORS 검사 자체가 발동하지 않아
-  문제없이 동작한다는 점에 유의 — "왜 로컬은 되는데 배포 도메인은 안 되지" 라는 증상의 전형적 원인).
+- 로컬: `bootRun --spring.profiles.active=local` (port 16000).
+- 운영: 맥미니 자가호스팅(`http://hkh7670.iptime.org:8080`), `dev` 프로파일, nginx 리버스 프록시 뒤
+  무중단 배포(`forward-headers-strategy: framework`).
+- CORS는 `SecurityConfig.corsConfigurationSource()` 화이트리스트 방식 — 새 프론트엔드/배포 도메인 추가
+  시 여기 등록 필요 (동일 origin 호출은 CORS 검사 자체가 발동하지 않아 "로컬은 되는데 배포는 안 됨"
+  증상의 전형적 원인).
 
-## 관련 프로젝트
+## 관련 프로젝트 / 문서
 
-- `/Users/kyu/workspace/backend-test-client`: 이 백엔드를 수동 테스트하기 위한 Vite + React + TS
-  프론트엔드 (OAuth 로그인, 주문 생성, Toss 결제 테스트 페이지 포함). OAuth 테스트 전용이 아니라
-  백엔드 전반의 수동 테스트 클라이언트라 `oauth-test`에서 이름을 바꿨다. 백엔드 API 변경 시 필요하면
-  같이 갱신한다.
-
-## 문서
-
-- `docs/oauth-pkce-login.md`: OAuth PKCE 흐름 설명 (API 베이스 경로는 최신화 필요, 위 참고).
+- `/Users/kyu/workspace/backend-test-client`: 수동 테스트용 Vite+React+TS 프론트엔드(OAuth 로그인,
+  주문, Toss 결제 테스트). 백엔드 API 변경 시 필요하면 같이 갱신.
+- `docs/oauth-pkce-login.md`: OAuth PKCE 흐름 (API 베이스 경로는 구버전, 위 인증 섹션 참고).
 - `docs/order-toss-payment-integration.md`: 주문/Toss 결제 연동 설계 문서.
