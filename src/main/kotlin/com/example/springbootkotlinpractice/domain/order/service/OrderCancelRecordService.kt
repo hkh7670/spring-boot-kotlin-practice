@@ -6,6 +6,7 @@ import com.example.springbootkotlinpractice.domain.order.repository.OrderReposit
 import com.example.springbootkotlinpractice.domain.order.repository.OrderStatusHistoryRepository
 import com.example.springbootkotlinpractice.domain.payment.repository.PaymentRepository
 import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
+import com.example.springbootkotlinpractice.enums.OrderStatus
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import org.springframework.data.repository.findByIdOrNull
@@ -30,9 +31,16 @@ class OrderCancelRecordService(
         val payment = paymentRepository.findByOrderId(orderId)
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_PAYMENT_INFO)
 
-        order.cancelPaidOrder()
+        // 동시 중복 취소 요청 방어 — 원자적 조건부 UPDATE로 PAID 상태일 때만 취소 처리한다. 0건이면
+        // 이미 다른 요청이 처리했다는 뜻이므로(Toss 취소 자체는 이미 성공한 뒤라 보정 불필요) 재고
+        // 중복 복구를 막기 위해 조용히 종료한다.
+        val updatedRows = orderRepository.updateStatusIfCurrent(orderId, OrderStatus.PAID, OrderStatus.CANCELLED)
+        if (updatedRows == 0) {
+            return
+        }
+
         payment.cancel()
-        orderStatusHistoryRepository.save(OrderStatusHistory.of(order.id, order.status))
+        orderStatusHistoryRepository.save(OrderStatusHistory.of(order.id, OrderStatus.CANCELLED))
 
         orderItemRepository.findByOrder(order).forEach {
             productOptionRepository.increaseStock(it.productOption.id, it.count)

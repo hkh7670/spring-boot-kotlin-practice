@@ -7,6 +7,7 @@ import com.example.springbootkotlinpractice.domain.order.repository.OrderReposit
 import com.example.springbootkotlinpractice.domain.order.repository.OrderStatusHistoryRepository
 import com.example.springbootkotlinpractice.domain.payment.repository.PaymentRepository
 import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
+import com.example.springbootkotlinpractice.enums.OrderStatus
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import org.springframework.data.repository.findByIdOrNull
@@ -31,14 +32,21 @@ class OrderReturnRecordService(
         val payment = paymentRepository.findByOrderId(orderId)
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_PAYMENT_INFO)
 
-        order.completeReturn()
+        // 동시 중복 반품완료 요청 방어 — 원자적 조건부 UPDATE로 RETURNING 상태일 때만 처리한다. 0건이면
+        // 이미 다른 요청이 처리했다는 뜻(Toss 환불 자체는 이미 성공한 뒤라 보정 불필요) — 최종 상태는
+        // 어차피 RETURNED로 동일하므로 에러 없이 같은 응답을 그대로 반환한다.
+        val updatedRows = orderRepository.updateStatusIfCurrent(orderId, OrderStatus.RETURNING, OrderStatus.RETURNED)
+        if (updatedRows == 0) {
+            return OrderStatusResponse(orderId = order.id, orderUid = order.orderUid, status = OrderStatus.RETURNED)
+        }
+
         payment.cancel()
-        orderStatusHistoryRepository.save(OrderStatusHistory.of(order.id, order.status))
+        orderStatusHistoryRepository.save(OrderStatusHistory.of(order.id, OrderStatus.RETURNED))
 
         orderItemRepository.findByOrder(order).forEach {
             productOptionRepository.increaseStock(it.productOption.id, it.count)
         }
 
-        return OrderStatusResponse(orderId = order.id, orderUid = order.orderUid, status = order.status)
+        return OrderStatusResponse(orderId = order.id, orderUid = order.orderUid, status = OrderStatus.RETURNED)
     }
 }

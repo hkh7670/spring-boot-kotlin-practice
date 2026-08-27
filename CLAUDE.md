@@ -71,7 +71,10 @@ exception/         ApiErrorException, ApiCommonAdvice
 - null/empty 체크는 `CollectionUtils.isEmpty()`/`StringUtils.hasText()`, `!!` 금지.
 - 상태값(`Order.status`, `Payment.status`)은 컴파일타임 강제(`private set`)가 아니라 평범한 public
   `var`다 — Kotlin 주 생성자 프로퍼티는 커스텀 접근자를 문법적으로 붙일 수 없기 때문. 대신 항상 이름
-  있는 메서드(`markPaid()`, `cancelPaidOrder()`, `cancel()`, `done()` 등)로만 변경하는 컨벤션으로 대체.
+  있는 메서드(`markPaid()`, `markShipping()`, `cancel()`, `done()` 등)로만 변경하는 컨벤션으로 대체.
+  단, 외부 API(Toss) 성공 후 반영되는 동시성 민감한 전이(결제확정/주문취소/반품완료)는 이 엔티티
+  메서드 대신 `OrderRepository.updateStatusIfCurrent()` 원자적 조건부 UPDATE를 쓴다 — 아래 "주문취소/
+  반품" 섹션 참고.
 
 ## 인증/인가 (`domain/auth`, `common/security`)
 
@@ -99,8 +102,10 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 ```
 
 `CANCELLED`는 `PENDING_PAYMENT`/`PAID`에서만 가능 — 배송 시작(`SHIPPING` 이상) 후에는 결제취소 불가
-(`ORDER_ALREADY_SHIPPING`), 배송완료 후 환불은 반품 절차(`RETURNING`→`RETURNED`)로만. 모든 전이는
-`Order` 엔티티의 이름 있는 메서드를 통하고, 각 메서드가 허용 안 되는 현재 상태를 예외로 막는다.
+(`ORDER_ALREADY_SHIPPING`), 배송완료 후 환불은 반품 절차(`RETURNING`→`RETURNED`)로만. 단순 전이(배송
+시작/완료, 반품요청)는 `Order` 엔티티의 이름 있는 메서드가 허용 안 되는 현재 상태를 예외로 막고,
+외부 API(Toss) 성공 후 반영되는 전이(결제확정/취소/반품완료)는 `OrderRepository.updateStatusIfCurrent()`
+원자적 조건부 UPDATE가 막는다 (아래 "동시 중복 요청 방어" 참고).
 
 ## 주문취소/반품 — Toss 호출 먼저, DB는 성공 후에
 
@@ -117,6 +122,19 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
   DELIVERED→RETURNING)과 `OrderShippingService`는 외부호출이 없어 각각 단일 `@Transactional`.
 - Payment 조회보다 **상태 검증을 먼저** 해야 한다 — 안 그러면 `PENDING_PAYMENT`(Payment 미존재) 취소
   시도가 `NOT_FOUND_ORDER`로 잘못 응답한다 (`ORDER_NOT_PAID`가 맞음).
+- **동시 중복 요청 방어**: `PaymentRecordService`/`OrderCancelRecordService`/`OrderReturnRecordService`
+  셋 다 주문 상태 전이를 `order.markPaid()`/`markCancelled()` 같은 엔티티 메서드가 아니라
+  `OrderRepository.updateStatusIfCurrent(orderId, expectedStatus, newStatus)`(원자적 조건부 UPDATE,
+  `decreaseStock()`과 동일 패턴)로 한다 — 영향받은 row가 0이면 이미 다른 동시 요청이 처리했다는
+  뜻이므로 재고복구/이벤트발행 등 후속 부수효과를 건너뛴다. 실제로 프론트(`OrderCompletePage.tsx`)가
+  React StrictMode 이중 마운트로 결제확정을 밀리초 단위로 두 번 호출해, 엔티티 메서드의 in-memory
+  상태체크 방식(두 트랜잭션이 같은 상태를 동시에 읽어버림)이 재고를 두 배로 복구하는 사고가 있었다
+  (프론트는 `useRef` 가드로 이미 수정, 백엔드는 방어적으로 원자적 UPDATE로 전환). 비관적 락
+  (`SELECT ... FOR UPDATE`)은 Toss 외부호출과 얽혀 락 경합/데드락 위험이 있어 채택하지 않음.
+  `Order.markCancelled()`/`cancelPaidOrder()`/`completeReturn()` 엔티티 메서드는 이 전환으로 전부
+  삭제됨(정상 흐름에서는 각 Service 계층의 사전 상태검증이 이미 걸러주므로 손실 없음) —
+  `markPaid()`/`markShipping()`/`markDelivered()`/`requestReturn()`은 동시 중복 위험이 없는 단순
+  전이라 그대로 유지.
 
 ## 주문/결제 기타 컨벤션
 

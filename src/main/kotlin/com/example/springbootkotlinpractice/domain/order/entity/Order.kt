@@ -39,8 +39,11 @@ class Order(
     val deliveryPrice: Int = 0,
 
     // Kotlin 문법상 주 생성자 프로퍼티에는 접근자(private/protected set)를 붙일 수 없다. 컴파일 타임으로
-    // 강제하진 않되, 이 필드는 항상 markPaid()/markCancelled()/cancelPaidOrder() 같은 이름 있는 메서드를
-    // 통해서만 변경한다 (status = X 직접 대입 금지).
+    // 강제하진 않되, 이 필드는 항상 markPaid()/markShipping() 같은 이름 있는 메서드를 통해서만 변경한다
+    // (status = X 직접 대입 금지). 단, 외부 API(Toss) 성공 이후 반영되는 동시성 민감한 전이(결제확정/
+    // 주문취소/반품완료)는 중복 요청 레이스를 막기 위해 이 엔티티 메서드 대신
+    // OrderRepository.updateStatusIfCurrent() 원자적 조건부 UPDATE를 쓴다 (PaymentRecordService,
+    // OrderCancelRecordService, OrderReturnRecordService 참고).
     @Comment("주문 상태")
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
@@ -55,24 +58,6 @@ class Order(
     fun markPaid() {
         validatePendingPayment()
         status = OrderStatus.PAID
-    }
-
-    fun markCancelled() {
-        validatePendingPayment()
-        status = OrderStatus.CANCELLED
-    }
-
-    // 결제 완료(PAID) 주문의 취소(환불) 전용. markCancelled() 는 결제 전(PENDING_PAYMENT) 주문 전용이라
-    // 재사용할 수 없다 (PAID 상태에서 호출하면 ALREADY_PAID_ORDER 를 던진다). 배송이 시작된(SHIPPING)
-    // 이후로는 취소를 막는다.
-    fun cancelPaidOrder() {
-        when (status) {
-            OrderStatus.PAID -> status = OrderStatus.CANCELLED
-            OrderStatus.CANCELLED -> throw ApiErrorException(ResponseCodeEnum.ORDER_ALREADY_CANCELLED)
-            OrderStatus.PENDING_PAYMENT -> throw ApiErrorException(ResponseCodeEnum.ORDER_NOT_PAID)
-            OrderStatus.SHIPPING, OrderStatus.DELIVERED,
-            OrderStatus.RETURNING, OrderStatus.RETURNED -> throw ApiErrorException(ResponseCodeEnum.ORDER_ALREADY_SHIPPING)
-        }
     }
 
     // 운영자가 배송을 시작 처리한다.
@@ -96,14 +81,6 @@ class Order(
         when (status) {
             OrderStatus.DELIVERED -> status = OrderStatus.RETURNING
             else -> throw ApiErrorException(ResponseCodeEnum.ORDER_NOT_DELIVERED)
-        }
-    }
-
-    // 반품 택배가 도착했을 때 운영자가 반품완료 처리한다.
-    fun completeReturn() {
-        when (status) {
-            OrderStatus.RETURNING -> status = OrderStatus.RETURNED
-            else -> throw ApiErrorException(ResponseCodeEnum.ORDER_NOT_RETURNING)
         }
     }
 
