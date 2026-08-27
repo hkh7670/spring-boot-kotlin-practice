@@ -215,10 +215,19 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 
 ## DB 스키마 (`ddl.sql`)
 
-프로젝트 루트 `ddl.sql`이 스키마 단일 소스, 항상 "새 DB 최초 구축" 전제로 최신 `CREATE TABLE`만 유지.
-신규 테이블은 `CREATE TABLE` 추가만. 기존 테이블 컬럼/인덱스 추가는 파일 끝에 별도 `ALTER TABLE` 추가
-(단, 앞부분 `CREATE TABLE`도 최종 컬럼까지 반영). 엔티티 변경 시 `ddl.sql`도 항상 같이 갱신할 것 —
-`local`/`dev`는 `ddl-auto: none`이라 자동 반영 안 됨.
+프로젝트 루트 `ddl.sql`이 스키마 단일 소스, 항상 "새 DB 최초 구축" 전제로 최신 `CREATE TABLE`만 유지
+(모든 `CREATE TABLE`은 항상 최종 컬럼 상태 — 과거 컬럼 추가/삭제/리네임 흔적을 남기지 않는다).
+엔티티 변경 시 `ddl.sql`도 항상 같이 갱신할 것 — `local`/`dev`는 `ddl-auto: none`이라 자동 반영
+안 됨.
+
+기존에 이미 떠 있는 real DB에 반영할 때 필요한 `ALTER TABLE`은 파일 끝에 임시로 적어두고 사람이
+직접 실행한 뒤 **바로 지운다** — 다음 스키마 변경 때 그대로 남겨두면, 나중에 `CREATE TABLE`에
+이미 흡수된 컬럼을 다시 추가하려 들거나(중복 컬럼 에러) 이미 이름이 바뀐/삭제된 컬럼을 참조하게
+되어(unknown column 에러), 신규 DB에 CREATE부터 전체를 순서대로 실행할 때 중간에 깨진다(실제로
+겪은 사고: `products.stock_count`/`price` 제거와 `cart_items`/`order_items`의
+`product_id`→`product_option_id` 리네임이 `CREATE TABLE`엔 반영됐는데 파일 끝 `ALTER TABLE`은
+옛 상태 그대로 남아있어 총돌). 즉 `ALTER TABLE` 블록은 "지금 막 반영해야 하는 사람을 위한 1회용
+안내문"이지 히스토리 기록이 아니다.
 
 로컬/데모용 상품 데이터는 프로젝트 루트 `seed-data.sql`로 별도 관리 (H2 콘솔 또는 MySQL 클라이언트에서
 직접 실행). `ddl.sql`과 동일하게 "새 DB 최초 구축" 전제 — 멱등성 없어 재실행 시 중복 insert됨. 원래

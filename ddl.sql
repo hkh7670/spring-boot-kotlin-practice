@@ -16,15 +16,15 @@ CREATE TABLE admins
 
 CREATE TABLE cart_items
 (
-    id               BIGINT AUTO_INCREMENT
+    id                BIGINT AUTO_INCREMENT
         PRIMARY KEY,
-    member_id        BIGINT      NOT NULL COMMENT '장바구니 소유 회원 ID (members.id)',
-    product_id       BIGINT      NOT NULL COMMENT '상품 ID (products.id)',
-    count            INT         NOT NULL COMMENT '담은 수량',
-    created_datetime DATETIME(6) NOT NULL,
-    updated_datetime DATETIME(6) NOT NULL,
+    member_id         BIGINT      NOT NULL COMMENT '장바구니 소유 회원 ID (members.id)',
+    product_option_id BIGINT      NOT NULL COMMENT '상품 옵션 ID (product_options.id)',
+    count             INT         NOT NULL COMMENT '담은 수량',
+    created_datetime  DATETIME(6) NOT NULL,
+    updated_datetime  DATETIME(6) NOT NULL,
     CONSTRAINT uq_cart_items_01
-        UNIQUE (member_id, product_id)
+        UNIQUE (member_id, product_option_id)
 )
     COMMENT '회원별 장바구니 상품';
 
@@ -85,14 +85,14 @@ CREATE TABLE members
 
 CREATE TABLE order_items
 (
-    id               BIGINT AUTO_INCREMENT
+    id                BIGINT AUTO_INCREMENT
         PRIMARY KEY,
-    order_id         BIGINT        NOT NULL COMMENT '주문 ID (orders.id)',
-    product_id       BIGINT        NOT NULL COMMENT '상품 ID (products.id)',
-    price            BIGINT        NOT NULL COMMENT '주문 시점의 상품 가격',
-    count            INT DEFAULT 1 NOT NULL COMMENT '주문 수량',
-    created_datetime DATETIME(6)   NOT NULL,
-    updated_datetime DATETIME(6)   NOT NULL
+    order_id          BIGINT        NOT NULL COMMENT '주문 ID (orders.id)',
+    product_option_id BIGINT        NOT NULL COMMENT '상품 옵션 ID (product_options.id)',
+    price             BIGINT        NOT NULL COMMENT '주문 시점의 상품 가격',
+    count             INT DEFAULT 1 NOT NULL COMMENT '주문 수량',
+    created_datetime  DATETIME(6)   NOT NULL,
+    updated_datetime  DATETIME(6)   NOT NULL
 )
     COMMENT '주문 상품 정보';
 
@@ -179,7 +179,6 @@ CREATE TABLE products
     id               BIGINT AUTO_INCREMENT
         PRIMARY KEY,
     name             VARCHAR(50)   NOT NULL COMMENT '상품 명',
-    stock_count      INT DEFAULT 0 NOT NULL COMMENT '재고 수량',
     description      TEXT          NULL COMMENT '상품 상세 설명',
     image_url        VARCHAR(500)  NULL COMMENT '대표 이미지 URL',
     category_id      BIGINT        NULL COMMENT '카테고리 ID (categories.id, 소분류)',
@@ -206,48 +205,4 @@ CREATE TABLE vendors
     updated_datetime              DATETIME(6)   NOT NULL
 )
     COMMENT '상품 업체(공급사) 정보';
-
--- 기존 DB의 products 테이블에 category_id, vendor_id 컬럼과 인덱스를 추가할 때 사용
-ALTER TABLE products
-    ADD COLUMN category_id BIGINT NULL COMMENT '카테고리 ID (categories.id, 소분류)' AFTER stock_count;
-ALTER TABLE products
-    ADD COLUMN vendor_id BIGINT NULL COMMENT '업체 ID (vendors.id)' AFTER category_id;
-
-CREATE INDEX idx_products_01
-    ON products (category_id);
-
-CREATE INDEX idx_products_02
-    ON products (vendor_id);
-
--- 기존 DB의 products 테이블에 description, image_url 컬럼을 추가할 때 사용
-ALTER TABLE products
-    ADD COLUMN description TEXT NULL COMMENT '상품 상세 설명' AFTER stock_count;
-ALTER TABLE products
-    ADD COLUMN image_url VARCHAR(500) NULL COMMENT '대표 이미지 URL' AFTER description;
-
--- 기존 DB의 products 테이블에서 stock_count, price 컬럼을 제거할 때 사용
--- (product_options로 재고+가격 이전 완료 후 실행 — 기존 row가 있다면 product_options 백필 시
---  stock_count뿐 아니라 price도 함께 채워야 함)
-ALTER TABLE products
-    DROP COLUMN stock_count;
-ALTER TABLE products
-    DROP COLUMN price;
-
--- 기존 DB의 order_items 테이블의 product_id를 product_option_id로 교체할 때 사용
--- 주의: 기존 row가 있으면 NOT NULL 추가 전에 product_option_id 백필 또는 해당 row 삭제가 필요함
---       (product_id -> product_option_id 매핑 정보가 없어 자동 백필 불가)
-ALTER TABLE order_items
-    ADD COLUMN product_option_id BIGINT NOT NULL COMMENT '상품 옵션 ID (product_options.id)' AFTER order_id;
-ALTER TABLE order_items
-    DROP COLUMN product_id;
-
--- 기존 DB의 cart_items 테이블의 product_id를 product_option_id로 교체할 때 사용 (위와 동일한 백필 주의사항)
-ALTER TABLE cart_items
-    DROP INDEX uq_cart_items_01;
-ALTER TABLE cart_items
-    ADD COLUMN product_option_id BIGINT NOT NULL COMMENT '상품 옵션 ID (product_options.id)' AFTER member_id;
-ALTER TABLE cart_items
-    DROP COLUMN product_id;
-ALTER TABLE cart_items
-    ADD CONSTRAINT uq_cart_items_01 UNIQUE (member_id, product_option_id);
 
