@@ -47,7 +47,8 @@ domain/
     service/       OrderService, OrderCancelService(+RecordService), OrderReturnService(+RecordService),
                     OrderShippingService
   payment/         Toss 결제 승인/취소
-  product/         상품 목록(카테고리·검색·페이징)/상세 조회 API (QueryDSL, ProductRepositoryImpl)
+  product/         상품 목록(카테고리·검색·페이징)/상세 조회 API (QueryDSL, ProductRepositoryImpl),
+                    ProductOption(상품 옵션, 재고는 여기서만 관리)
   category/        카테고리(대/중/소분류) 목록 조회 API
   delivery/        배송 옵션 목록 조회 API
 enums/             ResponseCodeEnum, OrderStatus, PaymentStatus, JoinProvider, Role, TokenType
@@ -141,29 +142,52 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 - `OrderService.getOrders()`(주문 목록, 사용자 인증 필요): 마찬가지로 `OrderItemRepository.findByOrderIdIn()`
   배치조회로 대표 상품명 + 건수만 요약해 반환.
 
+## 상품 옵션(`ProductOption`) — 재고는 옵션 단위로만 관리
+
+상품구매 시 옵션(사이즈/색상 등)을 지정할 수 있도록, `products` 하위에 `product_options`
+테이블(1:N)을 추가하고 재고 관리를 전부 옵션 레벨로 이전했다. **모든 `Product`는 최소 1개의
+`ProductOption`을 가진다** — 옵션이 실제로 없는 단순 상품도 "기본" 옵션 1개로 취급 (하이브리드
+아님, 재고 조회/차감 경로가 항상 하나로 통일됨). `products.stock_count` 컬럼은 완전히 제거됨.
+
+- `ProductOption`은 `OrderItem`과 동일하게(이 코드베이스에서 `@ManyToOne`을 쓰는 유이한 두 엔티티)
+  `Product`를 `@ManyToOne(FetchType.LAZY)`로 참조한다 — `Product`/`Category`/`CartItem`처럼 raw
+  `Long` FK를 쓰는 스타일과 의도적으로 다름(부모 엔티티 접근이 빈번해 프록시 재사용 가치가 큼).
+  `Product`에는 `@OneToMany` 컬렉션을 추가하지 않았다(불필요, `ProductOptionRepository.findByProductId()`로 조회).
+- 재고 차감/복구(`decreaseStock`/`increaseStock`, 조건부 원자적 UPDATE)가 `ProductRepository`에서
+  `ProductOptionRepository`로 완전히 이동. `OrderItem.product` 필드도 `OrderItem.productOption`으로
+  교체(FK `order_items.product_option_id`) — 상품 정보는 `orderItem.productOption.product`로 접근.
+- `GET /api/v1/products/{id}` 응답은 스칼라 `stockCount` 대신 `productOptions: [{id, name,
+  stockCount}]` 배열을 반환 (옵션 선택 UI 근거). 목록(`GET /api/v1/products`)의 `stockCount`는
+  이름은 그대로지만 값은 `ProductOptionRepository.sumStockByProductIdIn()`으로 구한 옵션별 합계.
+- `ProductOptionRepository`에 fetch join 메서드 2개(`findByIdFetchProduct`/`findByIdInFetchProduct`)를
+  둬서 옵션 조회 시 부모 `Product`를 한 번에 가져온다 (주문 생성 시 가격 계산, 장바구니 조회 양쪽에서
+  N+1 없이 `productOption.product.price`/`.name` 접근 가능).
+
 ## 장바구니 API (`domain/cart`)
 
 초기에는 서버 Cart 없이 프론트 zustand + localStorage로만 관리했으나(`OrderCreateRequest`가 아이템
 목록을 직접 받는 구조라 가능했음), 기기 간 동기화와 재고 기반 검증이 필요해져 회원별 서버 저장 방식으로
 전환함.
 
-- `cart_items` 테이블: `(member_id, product_id)` UNIQUE — `CartItem` 엔티티는 `Product`/`Category`와
-  동일하게 `@ManyToOne` 관계가 아닌 raw `Long` FK(`memberId`, `productId`)를 쓴다. 목록 조회 시
-  `ProductRepository.findAllById()`로 배치 조회해 N+1을 피하는 서비스 레이어 패턴과 짝을 이루기 위함.
-- API: `GET /api/v1/cart`(조회), `POST /api/v1/cart/items`(담기), `PATCH /api/v1/cart/items/{productId}`
-  (수량변경), `DELETE /api/v1/cart/items/{productId}`(삭제). 넷 다 인증 필요(`hasRole('USER')`), 담기/
-  수량변경/삭제 액션마다 프론트가 즉시 호출해 DB에 반영하는 구조(별도 "저장" 버튼 없음, 네이버/쿠팡과
-  동일한 방식).
+- `cart_items` 테이블: `(member_id, product_option_id)` UNIQUE — `CartItem` 엔티티는 `Product`/`Category`와
+  동일하게 `@ManyToOne` 관계가 아닌 raw `Long` FK(`memberId`, `productOptionId`)를 쓴다(상품 옵션
+  도입 전에는 `productId`였음). 목록 조회 시 `ProductOptionRepository.findByIdInFetchProduct()`로
+  배치 fetch join 해 N+1을 피하는 서비스 레이어 패턴과 짝을 이루기 위함.
+- API: `GET /api/v1/cart`(조회), `POST /api/v1/cart/items`(담기), `PATCH /api/v1/cart/items/{productOptionId}`
+  (수량변경), `DELETE /api/v1/cart/items/{productOptionId}`(삭제) — 넷 다 "상품"이 아니라 "상품 옵션"
+  단위로 동작한다. 인증 필요(`hasRole('USER')`), 담기/수량변경/삭제 액션마다 프론트가 즉시 호출해 DB에
+  반영하는 구조(별도 "저장" 버튼 없음, 네이버/쿠팡과 동일한 방식).
 - **담기=증분, 수량변경=절대값, 삭제=멱등**: `POST`는 이미 담겨 있으면 수량을 더하고(상품상세 "N개 더
   담기" 시맨틱), `PATCH`는 지정한 값으로 덮어쓴다. `DELETE`는 대상이 이미 없어도 에러 없이 성공 처리한다
   (멱등한 REST 삭제 시맨틱, 프론트 재시도/레이스에 안전).
 - **에러 처리 정책**: 조회는 담긴 게 없어도 에러 없이 빈 배열을 반환한다. 수량변경(`PATCH`)은 대상이
   장바구니에 없으면 `NOT_FOUND_CART_ITEM`(1021)을 던진다 — 사용자가 명시적으로 "업데이트 시점엔 에러가
   필요하다"고 판단해 조회(관대)와 변경(엄격)의 정책을 다르게 가져감.
-- **재고는 검증만, 예약/차감 안 함**: 담기/수량변경 시 `요청 수량 > product.stockCount`면
+- **재고는 검증만, 예약/차감 안 함**: 담기/수량변경 시 `요청 수량 > productOption.stockCount`면
   `NOT_ENOUGH_STOCK`(1005)으로 막지만, 실제 재고를 차감하지는 않는다 — 차감은 기존 설계 그대로 주문
-  생성 시점(`decreaseStock()` 원자적 UPDATE)에만 일어난다. 장바구니에 담아둔 사이 재고가 줄어드는
-  레이스는 주문 생성 시 재검증되므로 안전(위 "주문취소/반품 — Toss 호출 먼저" 섹션의 설계 철학과 동일).
+  생성 시점(`ProductOptionRepository.decreaseStock()` 원자적 UPDATE)에만 일어난다. 장바구니에 담아둔
+  사이 재고가 줄어드는 레이스는 주문 생성 시 재검증되므로 안전(위 "주문취소/반품 — Toss 호출 먼저"
+  섹션의 설계 철학과 동일).
 - **`soldOut` boolean만 노출, 원본 재고 수량은 응답에 없음**: `CartItemResponse.soldOut = stockCount <= 0`
   만 내려주고 실제 `stockCount`는 필드 자체가 없다 — 프론트가 재고 수량을 임의로 추측/노출하지 못하게
   막기 위함(품절 배지 표시 용도로만 쓰라는 의도).
@@ -200,8 +224,9 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 
 - `*ControllerTest.kt`: `MockMvc` + 실제 H2 통합 테스트. 외부 API(`TossPaymentsApi`, OAuth 클라이언트)와
   `RedisRepository`만 `@MockitoBean`. `profile=test`, H2 + `create-drop`.
-- 결제완료 주문 픽스처는 `productRepository.decreaseStock()`(벌크쿼리)를 트랜잭션 밖에서 직접 호출하면
-  `TransactionRequiredException` → `product.stockCount` 직접 감소+save 헬퍼(`createPaidOrder`) 사용.
+- 결제완료 주문 픽스처는 `productOptionRepository.decreaseStock()`(벌크쿼리)를 트랜잭션 밖에서 직접
+  호출하면 `TransactionRequiredException` → `productOption.stockCount` 직접 감소+save 헬퍼
+  (`createPaidOrder`) 사용.
 - **테스트 공백** (향후 보강 필요, 요청 전엔 먼저 손대지 않기): `AuthService` reissue/rotation,
   `AuthEmailController` login/signup, `OrderShippingService`/`OrderReturnService` 전체(구현만 하고
   비용 문제로 테스트 미작성), `ProductController`/`CategoryController`/`DeliveryOptionController`(신규

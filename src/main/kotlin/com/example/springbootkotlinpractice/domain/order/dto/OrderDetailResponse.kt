@@ -14,8 +14,10 @@ data class OrderDetailResponse(
 )
 
 data class OrderItemResponse(
+    val productOptionId: Long,
     val productId: Long,
     val productName: String,
+    val optionName: String,
     val price: Long,
     val count: Int,
 )

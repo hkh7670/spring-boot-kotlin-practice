@@ -156,6 +156,23 @@ CREATE TABLE payments
 CREATE INDEX idx_payments_01
     ON payments (order_id);
 
+CREATE TABLE product_options
+(
+    id               BIGINT AUTO_INCREMENT
+        PRIMARY KEY,
+    product_id       BIGINT        NOT NULL COMMENT '상품 ID (products.id)',
+    name             VARCHAR(100)  NOT NULL COMMENT '옵션 명 (예: 블랙 / L사이즈)',
+    stock_count      INT DEFAULT 0 NOT NULL COMMENT '옵션별 재고 수량',
+    created_datetime DATETIME(6)   NOT NULL,
+    updated_datetime DATETIME(6)   NOT NULL,
+    CONSTRAINT uq_product_options_01
+        UNIQUE (product_id, name)
+)
+    COMMENT '상품 옵션(변형) 정보';
+
+CREATE INDEX idx_product_options_01
+    ON product_options (product_id);
+
 CREATE TABLE products
 (
     id               BIGINT AUTO_INCREMENT
@@ -207,4 +224,26 @@ ALTER TABLE products
     ADD COLUMN description TEXT NULL COMMENT '상품 상세 설명' AFTER stock_count;
 ALTER TABLE products
     ADD COLUMN image_url VARCHAR(500) NULL COMMENT '대표 이미지 URL' AFTER description;
+
+-- 기존 DB의 products 테이블에서 stock_count 컬럼을 제거할 때 사용 (product_options로 재고 이전 완료 후 실행)
+ALTER TABLE products
+    DROP COLUMN stock_count;
+
+-- 기존 DB의 order_items 테이블의 product_id를 product_option_id로 교체할 때 사용
+-- 주의: 기존 row가 있으면 NOT NULL 추가 전에 product_option_id 백필 또는 해당 row 삭제가 필요함
+--       (product_id -> product_option_id 매핑 정보가 없어 자동 백필 불가)
+ALTER TABLE order_items
+    ADD COLUMN product_option_id BIGINT NOT NULL COMMENT '상품 옵션 ID (product_options.id)' AFTER order_id;
+ALTER TABLE order_items
+    DROP COLUMN product_id;
+
+-- 기존 DB의 cart_items 테이블의 product_id를 product_option_id로 교체할 때 사용 (위와 동일한 백필 주의사항)
+ALTER TABLE cart_items
+    DROP INDEX uq_cart_items_01;
+ALTER TABLE cart_items
+    ADD COLUMN product_option_id BIGINT NOT NULL COMMENT '상품 옵션 ID (product_options.id)' AFTER member_id;
+ALTER TABLE cart_items
+    DROP COLUMN product_id;
+ALTER TABLE cart_items
+    ADD CONSTRAINT uq_cart_items_01 UNIQUE (member_id, product_option_id);
 

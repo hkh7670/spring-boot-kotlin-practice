@@ -15,6 +15,8 @@ import com.example.springbootkotlinpractice.domain.order.repository.OrderReposit
 import com.example.springbootkotlinpractice.domain.payment.dto.PaymentConfirmRequest
 import com.example.springbootkotlinpractice.domain.payment.repository.PaymentRepository
 import com.example.springbootkotlinpractice.domain.product.entity.Product
+import com.example.springbootkotlinpractice.domain.product.entity.ProductOption
+import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
 import com.example.springbootkotlinpractice.domain.product.repository.ProductRepository
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.OrderStatus
@@ -67,6 +69,9 @@ class PaymentControllerTest {
     lateinit var productRepository: ProductRepository
 
     @Autowired
+    lateinit var productOptionRepository: ProductOptionRepository
+
+    @Autowired
     lateinit var orderRepository: OrderRepository
 
     @Autowired
@@ -84,6 +89,7 @@ class PaymentControllerTest {
     private lateinit var member: Member
     private lateinit var accessToken: String
     private lateinit var product: Product
+    private lateinit var productOption: ProductOption
     private lateinit var order: Order
 
     @BeforeEach
@@ -91,6 +97,7 @@ class PaymentControllerTest {
         orderItemRepository.deleteAll()
         paymentRepository.deleteAll()
         orderRepository.deleteAll()
+        productOptionRepository.deleteAll()
         productRepository.deleteAll()
         deliveryOptionRepository.deleteAll()
         memberRepository.deleteAll()
@@ -110,8 +117,9 @@ class PaymentControllerTest {
 
         val deliveryOption = deliveryOptionRepository.save(DeliveryOption(name = "기본 배송", price = DELIVERY_PRICE))
         // 재고 3개 중 1개가 이 주문 생성 시점에 이미 차감된 상태(2개 남음)를 흉내낸다.
-        product = productRepository.save(
-            Product(name = "테스트 상품", price = PRODUCT_TOTAL_PRICE, stockCount = ORIGINAL_STOCK_COUNT - ORDER_ITEM_COUNT)
+        product = productRepository.save(Product(name = "테스트 상품", price = PRODUCT_TOTAL_PRICE))
+        productOption = productOptionRepository.save(
+            ProductOption.of(product = product, name = "기본", stockCount = ORIGINAL_STOCK_COUNT - ORDER_ITEM_COUNT)
         )
         order = orderRepository.save(
             Order.of(
@@ -124,7 +132,7 @@ class PaymentControllerTest {
         orderItemRepository.save(
             OrderItem.of(
                 order = order,
-                product = product,
+                productOption = productOption,
                 price = PRODUCT_TOTAL_PRICE.toLong(),
                 count = ORDER_ITEM_COUNT,
             )
@@ -277,7 +285,7 @@ class PaymentControllerTest {
         assertThat(result.response.status).isEqualTo(502)
         assertThat(paymentRepository.existsByOrderId(order.id)).isFalse()
         assertThat(orderRepository.findById(order.id).get().status).isEqualTo(OrderStatus.CANCELLED)
-        assertThat(productRepository.findById(product.id).get().stockCount).isEqualTo(ORIGINAL_STOCK_COUNT)
+        assertThat(productOptionRepository.findById(productOption.id).get().stockCount).isEqualTo(ORIGINAL_STOCK_COUNT)
     }
 
     @Test

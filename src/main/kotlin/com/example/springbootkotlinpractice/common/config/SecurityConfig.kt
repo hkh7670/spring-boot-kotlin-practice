@@ -62,6 +62,7 @@ class SecurityConfig(
         val configuration = CorsConfiguration().apply {
             allowedOrigins = listOf(
                 "http://localhost:3000",
+                "http://localhost:3001",
                 "http://hkh7670.iptime.org:8080",
             )
             allowedMethods = listOf("GET", "POST", "PATCH", "DELETE")

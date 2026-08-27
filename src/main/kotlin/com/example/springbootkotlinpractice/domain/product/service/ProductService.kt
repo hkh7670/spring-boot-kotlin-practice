@@ -3,8 +3,10 @@ package com.example.springbootkotlinpractice.domain.product.service
 import com.example.springbootkotlinpractice.common.dto.PageResponse
 import com.example.springbootkotlinpractice.domain.category.repository.CategoryRepository
 import com.example.springbootkotlinpractice.domain.product.dto.ProductDetailResponse
+import com.example.springbootkotlinpractice.domain.product.dto.ProductOptionResponse
 import com.example.springbootkotlinpractice.domain.product.dto.ProductSummaryResponse
 import com.example.springbootkotlinpractice.domain.product.entity.Product
+import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
 import com.example.springbootkotlinpractice.domain.product.repository.ProductRepository
 import com.example.springbootkotlinpractice.domain.vendor.repository.VendorRepository
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
@@ -18,6 +20,7 @@ import org.springframework.util.CollectionUtils
 @Service
 class ProductService(
     private val productRepository: ProductRepository,
+    private val productOptionRepository: ProductOptionRepository,
     private val categoryRepository: CategoryRepository,
     private val vendorRepository: VendorRepository,
 ) {
@@ -26,6 +29,7 @@ class ProductService(
     fun getProducts(categoryId: Long?, keyword: String?, pageable: Pageable): PageResponse<ProductSummaryResponse> {
         val products = productRepository.search(categoryId, keyword, pageable)
         val vendorNameMap = findVendorNameMap(products.content)
+        val stockCountMap = findStockCountMap(products.content)
 
         return PageResponse.of(
             products.map {
@@ -34,7 +38,7 @@ class ProductService(
                     name = it.name,
                     price = it.price,
                     imageUrl = it.imageUrl,
-                    stockCount = it.stockCount,
+                    stockCount = stockCountMap[it.id] ?: 0,
                     categoryId = it.categoryId,
                     vendorName = vendorNameMap[it.vendorId],
                 )
@@ -49,6 +53,9 @@ class ProductService(
 
         val categoryName = product.categoryId?.let { categoryRepository.findByIdOrNull(it)?.name }
         val vendorName = product.vendorId?.let { vendorRepository.findByIdOrNull(it)?.name }
+        val productOptions = productOptionRepository.findByProductId(productId).map {
+            ProductOptionResponse(id = it.id, name = it.name, stockCount = it.stockCount)
+        }
 
         return ProductDetailResponse(
             id = product.id,
@@ -56,7 +63,7 @@ class ProductService(
             price = product.price,
             description = product.description,
             imageUrl = product.imageUrl,
-            stockCount = product.stockCount,
+            productOptions = productOptions,
             categoryId = product.categoryId,
             categoryName = categoryName,
             vendorId = product.vendorId,
@@ -70,5 +77,13 @@ class ProductService(
             return emptyMap()
         }
         return vendorRepository.findAllById(vendorIds).associateBy({ it.id }, { it.name })
+    }
+
+    private fun findStockCountMap(products: List<Product>): Map<Long, Int> {
+        if (CollectionUtils.isEmpty(products)) {
+            return emptyMap()
+        }
+        return productOptionRepository.sumStockByProductIdIn(products.map { it.id })
+            .associateBy({ it.getProductId() }, { it.getTotalStock().toInt() })
     }
 }

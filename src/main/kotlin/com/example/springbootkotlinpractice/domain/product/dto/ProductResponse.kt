@@ -16,9 +16,15 @@ data class ProductDetailResponse(
     val price: Int,
     val description: String?,
     val imageUrl: String?,
-    val stockCount: Int,
+    val productOptions: List<ProductOptionResponse>,
     val categoryId: Long?,
     val categoryName: String?,
     val vendorId: Long?,
     val vendorName: String?,
+)
+
+data class ProductOptionResponse(
+    val id: Long,
+    val name: String,
+    val stockCount: Int,
 )

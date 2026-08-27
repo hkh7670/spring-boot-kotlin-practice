@@ -35,6 +35,7 @@ enum class ResponseCodeEnum(
     ADMIN_ALREADY_INACTIVE(HttpStatus.CONFLICT, "1019", "이미 휴면 상태인 관리자입니다."),
     ADMIN_NOT_INACTIVE(HttpStatus.CONFLICT, "1020", "휴면 상태의 관리자만 활성화할 수 있습니다."),
     NOT_FOUND_CART_ITEM(HttpStatus.NOT_FOUND, "1021", "장바구니에 담긴 상품 정보가 존재하지 않습니다."),
+    NOT_FOUND_PRODUCT_OPTION(HttpStatus.NOT_FOUND, "1022", "상품 옵션 정보가 존재하지 않습니다."),
 
     // Auth Error (4000 ~)
     INVALID_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "4000", "유효하지 않은 JWT Token 입니다."),

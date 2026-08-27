@@ -6,11 +6,10 @@ import com.example.springbootkotlinpractice.domain.cart.dto.CartItemResponse
 import com.example.springbootkotlinpractice.domain.cart.dto.CartResponse
 import com.example.springbootkotlinpractice.domain.cart.entity.CartItem
 import com.example.springbootkotlinpractice.domain.cart.repository.CartItemRepository
-import com.example.springbootkotlinpractice.domain.product.entity.Product
-import com.example.springbootkotlinpractice.domain.product.repository.ProductRepository
+import com.example.springbootkotlinpractice.domain.product.entity.ProductOption
+import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.util.CollectionUtils
@@ -18,39 +17,39 @@ import org.springframework.util.CollectionUtils
 @Service
 class CartService(
     private val cartItemRepository: CartItemRepository,
-    private val productRepository: ProductRepository,
+    private val productOptionRepository: ProductOptionRepository,
 ) {
 
     @Transactional
     fun addItem(memberId: Long, request: CartItemAddRequest): CartResponse {
-        val product = getProduct(request.productId)
-        val existing = cartItemRepository.findByMemberIdAndProductId(memberId, request.productId)
+        val productOption = getProductOption(request.productOptionId)
+        val existing = cartItemRepository.findByMemberIdAndProductOptionId(memberId, request.productOptionId)
         val newCount = (existing?.count ?: 0) + request.count
-        validateStock(product, newCount)
+        validateStock(productOption, newCount)
 
         if (existing != null) {
             existing.count = newCount
         } else {
-            cartItemRepository.save(CartItem.of(memberId, request.productId, newCount))
+            cartItemRepository.save(CartItem.of(memberId, request.productOptionId, newCount))
         }
 
         return getCart(memberId)
     }
 
     @Transactional
-    fun updateCount(memberId: Long, productId: Long, request: CartItemCountRequest): CartResponse {
-        val cartItem = cartItemRepository.findByMemberIdAndProductId(memberId, productId)
+    fun updateCount(memberId: Long, productOptionId: Long, request: CartItemCountRequest): CartResponse {
+        val cartItem = cartItemRepository.findByMemberIdAndProductOptionId(memberId, productOptionId)
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_CART_ITEM)
 
-        validateStock(getProduct(productId), request.count)
+        validateStock(getProductOption(productOptionId), request.count)
         cartItem.count = request.count
 
         return getCart(memberId)
     }
 
     @Transactional
-    fun removeItem(memberId: Long, productId: Long): CartResponse {
-        cartItemRepository.deleteByMemberIdAndProductId(memberId, productId)
+    fun removeItem(memberId: Long, productOptionId: Long): CartResponse {
+        cartItemRepository.deleteByMemberIdAndProductOptionId(memberId, productOptionId)
         return getCart(memberId)
     }
 
@@ -61,31 +60,35 @@ class CartService(
             return CartResponse(items = emptyList())
         }
 
-        val productMap = productRepository.findAllById(cartItems.map { it.productId }).associateBy { it.id }
+        val productOptionMap = productOptionRepository
+            .findByIdInFetchProduct(cartItems.map { it.productOptionId })
+            .associateBy { it.id }
 
         val items = cartItems.mapNotNull { cartItem ->
-            val product = productMap[cartItem.productId] ?: return@mapNotNull null
+            val productOption = productOptionMap[cartItem.productOptionId] ?: return@mapNotNull null
             CartItemResponse(
-                productId = product.id,
-                productName = product.name,
-                price = product.price,
-                imageUrl = product.imageUrl,
+                productOptionId = productOption.id,
+                productId = productOption.product.id,
+                productName = productOption.product.name,
+                optionName = productOption.name,
+                price = productOption.product.price,
+                imageUrl = productOption.product.imageUrl,
                 count = cartItem.count,
-                soldOut = product.stockCount <= 0,
+                soldOut = productOption.stockCount <= 0,
             )
         }
 
         return CartResponse(items = items)
     }
 
-    private fun validateStock(product: Product, requestedCount: Int) {
-        if (requestedCount > product.stockCount) {
+    private fun validateStock(productOption: ProductOption, requestedCount: Int) {
+        if (requestedCount > productOption.stockCount) {
             throw ApiErrorException(ResponseCodeEnum.NOT_ENOUGH_STOCK)
         }
     }
 
-    private fun getProduct(productId: Long): Product {
-        return productRepository.findByIdOrNull(productId)
-            ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_PRODUCT)
+    private fun getProductOption(productOptionId: Long): ProductOption {
+        return productOptionRepository.findByIdFetchProduct(productOptionId)
+            ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_PRODUCT_OPTION)
     }
 }

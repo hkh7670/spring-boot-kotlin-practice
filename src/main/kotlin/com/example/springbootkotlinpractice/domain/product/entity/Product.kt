@@ -22,10 +22,6 @@ class Product(
     @Column(name = "price", nullable = false)
     var price: Int,
 
-    @Comment("재고 수량")
-    @Column(name = "stock_count", nullable = false)
-    var stockCount: Int = 0,
-
     @Comment("상품 상세 설명")
     @Column(name = "description", nullable = true, columnDefinition = "TEXT")
     var description: String? = null,
@@ -53,7 +49,6 @@ class Product(
         fun of(
             name: String,
             price: Int,
-            stockCount: Int = 0,
             description: String? = null,
             imageUrl: String? = null,
             categoryId: Long? = null,
@@ -62,7 +57,6 @@ class Product(
             return Product(
                 name = name,
                 price = price,
-                stockCount = stockCount,
                 description = description,
                 imageUrl = imageUrl,
                 categoryId = categoryId,

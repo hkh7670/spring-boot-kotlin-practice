@@ -59,13 +59,13 @@ class CartController(
         description = "장바구니에 담긴 상품의 수량을 변경한다. 재고를 초과하면 변경할 수 없다.",
     )
     @PreAuthorize("hasRole('USER')")
-    @PatchMapping("/items/{productId}")
+    @PatchMapping("/items/{productOptionId}")
     fun updateCount(
         @AuthenticationPrincipal userPrincipal: UserPrincipal,
-        @PathVariable productId: Long,
+        @PathVariable productOptionId: Long,
         @Valid @RequestBody request: CartItemCountRequest,
     ): ResponseEntity<CommonResponse<CartResponse>> {
-        return ResponseHandler.ok(cartService.updateCount(userPrincipal.id, productId, request))
+        return ResponseHandler.ok(cartService.updateCount(userPrincipal.id, productOptionId, request))
     }
 
     @Operation(
@@ -73,11 +73,11 @@ class CartController(
         description = "장바구니에서 상품을 제거한다. 이미 없는 상품이어도 성공으로 처리한다.",
     )
     @PreAuthorize("hasRole('USER')")
-    @DeleteMapping("/items/{productId}")
+    @DeleteMapping("/items/{productOptionId}")
     fun removeItem(
         @AuthenticationPrincipal userPrincipal: UserPrincipal,
-        @PathVariable productId: Long,
+        @PathVariable productOptionId: Long,
     ): ResponseEntity<CommonResponse<CartResponse>> {
-        return ResponseHandler.ok(cartService.removeItem(userPrincipal.id, productId))
+        return ResponseHandler.ok(cartService.removeItem(userPrincipal.id, productOptionId))
     }
 }

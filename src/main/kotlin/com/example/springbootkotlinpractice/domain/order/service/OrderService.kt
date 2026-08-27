@@ -14,8 +14,8 @@ import com.example.springbootkotlinpractice.domain.order.entity.OrderStatusHisto
 import com.example.springbootkotlinpractice.domain.order.repository.OrderItemRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderStatusHistoryRepository
-import com.example.springbootkotlinpractice.domain.product.entity.Product
-import com.example.springbootkotlinpractice.domain.product.repository.ProductRepository
+import com.example.springbootkotlinpractice.domain.product.entity.ProductOption
+import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
 import com.example.springbootkotlinpractice.enums.OrderStatus
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
@@ -29,23 +29,23 @@ class OrderService(
     private val orderRepository: OrderRepository,
     private val orderItemRepository: OrderItemRepository,
     private val orderStatusHistoryRepository: OrderStatusHistoryRepository,
-    private val productRepository: ProductRepository,
+    private val productOptionRepository: ProductOptionRepository,
     private val deliveryOptionRepository: DeliveryOptionRepository,
 ) {
 
     @Transactional
     fun createOrder(memberId: Long, request: OrderCreateRequest): OrderCreateResponse {
         val deliveryOption = getDeliveryOption(request.deliveryOptionId)
-        val orderItems = request.items.map { item -> getProduct(item.productId) to item.count }
+        val orderItems = request.items.map { item -> getProductOption(item.productOptionId) to item.count }
 
-        orderItems.forEach { (product, count) ->
-            val updatedRowCount = productRepository.decreaseStock(product.id, count)
+        orderItems.forEach { (productOption, count) ->
+            val updatedRowCount = productOptionRepository.decreaseStock(productOption.id, count)
             if (updatedRowCount == 0) {
                 throw ApiErrorException(ResponseCodeEnum.NOT_ENOUGH_STOCK)
             }
         }
 
-        val productTotalPrice = orderItems.sumOf { (product, count) -> product.price * count }
+        val productTotalPrice = orderItems.sumOf { (productOption, count) -> productOption.product.price * count }
 
         val savedOrder = orderRepository.save(
             Order.of(
@@ -57,11 +57,11 @@ class OrderService(
         )
 
         orderItemRepository.saveAll(
-            orderItems.map { (product, count) ->
+            orderItems.map { (productOption, count) ->
                 OrderItem.of(
                     order = savedOrder,
-                    product = product,
-                    price = product.price.toLong(),
+                    productOption = productOption,
+                    price = productOption.product.price.toLong(),
                     count = count,
                 )
             }
@@ -93,8 +93,10 @@ class OrderService(
             isPaid = order.status == OrderStatus.PAID,
             itemList = orderItems.map {
                 OrderItemResponse(
-                    productId = it.product.id,
-                    productName = it.product.name,
+                    productOptionId = it.productOption.id,
+                    productId = it.productOption.product.id,
+                    productName = it.productOption.product.name,
+                    optionName = it.productOption.name,
                     price = it.price,
                     count = it.count
                 )
@@ -116,7 +118,7 @@ class OrderService(
                     orderUid = order.orderUid,
                     status = order.status,
                     totalPrice = order.productTotalPrice + order.deliveryPrice,
-                    representativeProductName = items.firstOrNull()?.product?.name.orEmpty(),
+                    representativeProductName = items.firstOrNull()?.productOption?.product?.name.orEmpty(),
                     itemCount = items.size,
                 )
             }
@@ -128,8 +130,8 @@ class OrderService(
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_DELIVERY_OPTION)
     }
 
-    private fun getProduct(productId: Long): Product {
-        return productRepository.findByIdOrNull(productId)
-            ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_PRODUCT)
+    private fun getProductOption(productOptionId: Long): ProductOption {
+        return productOptionRepository.findByIdFetchProduct(productOptionId)
+            ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_PRODUCT_OPTION)
     }
 }

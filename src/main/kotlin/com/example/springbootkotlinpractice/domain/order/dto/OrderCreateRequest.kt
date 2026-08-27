@@ -18,8 +18,8 @@ data class OrderCreateRequest(
 )
 
 data class OrderItemRequest(
-    @field:Schema(description = "상품 ID", example = "1")
-    val productId: Long,
+    @field:Schema(description = "상품 옵션 ID", example = "1")
+    val productOptionId: Long,
 
     @field:Schema(description = "주문 수량", example = "2")
     @field:Positive

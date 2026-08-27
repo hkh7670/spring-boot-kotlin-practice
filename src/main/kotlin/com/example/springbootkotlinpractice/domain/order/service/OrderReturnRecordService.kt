@@ -6,7 +6,7 @@ import com.example.springbootkotlinpractice.domain.order.repository.OrderItemRep
 import com.example.springbootkotlinpractice.domain.order.repository.OrderRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderStatusHistoryRepository
 import com.example.springbootkotlinpractice.domain.payment.repository.PaymentRepository
-import com.example.springbootkotlinpractice.domain.product.repository.ProductRepository
+import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import org.springframework.data.repository.findByIdOrNull
@@ -21,7 +21,7 @@ class OrderReturnRecordService(
     private val orderItemRepository: OrderItemRepository,
     private val orderStatusHistoryRepository: OrderStatusHistoryRepository,
     private val paymentRepository: PaymentRepository,
-    private val productRepository: ProductRepository,
+    private val productOptionRepository: ProductOptionRepository,
 ) {
 
     @Transactional
@@ -36,7 +36,7 @@ class OrderReturnRecordService(
         orderStatusHistoryRepository.save(OrderStatusHistory.of(order.id, order.status))
 
         orderItemRepository.findByOrder(order).forEach {
-            productRepository.increaseStock(it.product.id, it.count)
+            productOptionRepository.increaseStock(it.productOption.id, it.count)
         }
 
         return OrderStatusResponse(orderId = order.id, orderUid = order.orderUid, status = order.status)

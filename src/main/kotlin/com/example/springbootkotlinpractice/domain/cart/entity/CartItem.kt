@@ -14,7 +14,7 @@ import org.hibernate.annotations.Comment
 @Table(
     name = "cart_items",
     uniqueConstraints = [
-        UniqueConstraint(name = "uq_cart_items_01", columnNames = ["member_id", "product_id"]),
+        UniqueConstraint(name = "uq_cart_items_01", columnNames = ["member_id", "product_option_id"]),
     ],
 )
 @Comment("회원별 장바구니 상품")
@@ -24,9 +24,9 @@ class CartItem(
     @Column(name = "member_id", nullable = false, updatable = false)
     val memberId: Long,
 
-    @Comment("상품 ID (products.id)")
-    @Column(name = "product_id", nullable = false, updatable = false)
-    val productId: Long,
+    @Comment("상품 옵션 ID (product_options.id)")
+    @Column(name = "product_option_id", nullable = false, updatable = false)
+    val productOptionId: Long,
 
     @Comment("담은 수량")
     @Column(name = "count", nullable = false)
@@ -39,10 +39,10 @@ class CartItem(
     val id: Long = 0L
 
     companion object {
-        fun of(memberId: Long, productId: Long, count: Int): CartItem {
+        fun of(memberId: Long, productOptionId: Long, count: Int): CartItem {
             return CartItem(
                 memberId = memberId,
-                productId = productId,
+                productOptionId = productOptionId,
                 count = count,
             )
         }

@@ -17,6 +17,8 @@ import com.example.springbootkotlinpractice.domain.order.repository.OrderReposit
 import com.example.springbootkotlinpractice.domain.payment.entity.Payment
 import com.example.springbootkotlinpractice.domain.payment.repository.PaymentRepository
 import com.example.springbootkotlinpractice.domain.product.entity.Product
+import com.example.springbootkotlinpractice.domain.product.entity.ProductOption
+import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
 import com.example.springbootkotlinpractice.domain.product.repository.ProductRepository
 import com.example.springbootkotlinpractice.enums.JoinProvider
 import com.example.springbootkotlinpractice.enums.OrderStatus
@@ -63,6 +65,9 @@ class OrderControllerTest {
     lateinit var productRepository: ProductRepository
 
     @Autowired
+    lateinit var productOptionRepository: ProductOptionRepository
+
+    @Autowired
     lateinit var deliveryOptionRepository: DeliveryOptionRepository
 
     @Autowired
@@ -83,6 +88,7 @@ class OrderControllerTest {
     private lateinit var member: Member
     private lateinit var accessToken: String
     private lateinit var product: Product
+    private lateinit var productOption: ProductOption
     private lateinit var deliveryOption: DeliveryOption
 
     @BeforeEach
@@ -90,6 +96,7 @@ class OrderControllerTest {
         orderItemRepository.deleteAll()
         paymentRepository.deleteAll()
         orderRepository.deleteAll()
+        productOptionRepository.deleteAll()
         productRepository.deleteAll()
         deliveryOptionRepository.deleteAll()
         memberRepository.deleteAll()
@@ -107,17 +114,18 @@ class OrderControllerTest {
         )
         accessToken = jwtTokenProvider.createAccessToken(member.id, member.email, member.joinProvider, member.role)
 
-        product = productRepository.save(Product(name = "테스트 상품", price = 10_000, stockCount = 5))
+        product = productRepository.save(Product(name = "테스트 상품", price = 10_000))
+        productOption = productOptionRepository.save(ProductOption.of(product = product, name = "기본", stockCount = 5))
         deliveryOption = deliveryOptionRepository.save(DeliveryOption(name = "기본 배송", price = 3_000))
     }
 
     private fun authHeader(token: String = accessToken) = "Bearer $token"
 
-    private fun orderRequestBody(deliveryOptionId: Long, productId: Long, count: Int): String {
+    private fun orderRequestBody(deliveryOptionId: Long, productOptionId: Long, count: Int): String {
         return objectMapper.writeValueAsString(
             OrderCreateRequest(
                 deliveryOptionId = deliveryOptionId,
-                items = listOf(OrderItemRequest(productId = productId, count = count)),
+                items = listOf(OrderItemRequest(productOptionId = productOptionId, count = count)),
             )
         )
     }
@@ -128,7 +136,7 @@ class OrderControllerTest {
         mockMvc.post(BASE_URL) {
             header(HttpHeaders.AUTHORIZATION, authHeader())
             contentType = MediaType.APPLICATION_JSON
-            content = orderRequestBody(deliveryOption.id, product.id, 2)
+            content = orderRequestBody(deliveryOption.id, productOption.id, 2)
         }.andExpect {
             status { isCreated() }
             jsonPath("$.data.orderUid") { isNotEmpty() }
@@ -136,8 +144,8 @@ class OrderControllerTest {
             jsonPath("$.data.totalPrice") { value(23000) }
         }
 
-        val savedProduct = productRepository.findById(product.id).get()
-        assertThat(savedProduct.stockCount).isEqualTo(3)
+        val savedProductOption = productOptionRepository.findById(productOption.id).get()
+        assertThat(savedProductOption.stockCount).isEqualTo(3)
 
         val orders = orderRepository.findAll()
         assertThat(orders).hasSize(1)
@@ -152,7 +160,7 @@ class OrderControllerTest {
         mockMvc.post(BASE_URL) {
             header(HttpHeaders.AUTHORIZATION, authHeader())
             contentType = MediaType.APPLICATION_JSON
-            content = orderRequestBody(deliveryOption.id, product.id, 100)
+            content = orderRequestBody(deliveryOption.id, productOption.id, 100)
         }.andExpect {
             status { isConflict() }
         }
@@ -176,7 +184,7 @@ class OrderControllerTest {
         mockMvc.post(BASE_URL) {
             header(HttpHeaders.AUTHORIZATION, authHeader())
             contentType = MediaType.APPLICATION_JSON
-            content = orderRequestBody(999_999L, product.id, 1)
+            content = orderRequestBody(999_999L, productOption.id, 1)
         }.andExpect {
             status { isNotFound() }
         }
@@ -188,7 +196,7 @@ class OrderControllerTest {
         val createResult = mockMvc.post(BASE_URL) {
             header(HttpHeaders.AUTHORIZATION, authHeader())
             contentType = MediaType.APPLICATION_JSON
-            content = orderRequestBody(deliveryOption.id, product.id, 1)
+            content = orderRequestBody(deliveryOption.id, productOption.id, 1)
         }.andReturn()
         val orderId = objectMapper.readTree(createResult.response.contentAsString)["data"]["orderId"].asLong()
 
@@ -220,7 +228,7 @@ class OrderControllerTest {
         val createResult = mockMvc.post(BASE_URL) {
             header(HttpHeaders.AUTHORIZATION, authHeader())
             contentType = MediaType.APPLICATION_JSON
-            content = orderRequestBody(deliveryOption.id, product.id, 1)
+            content = orderRequestBody(deliveryOption.id, productOption.id, 1)
         }.andReturn()
         val orderId = objectMapper.readTree(createResult.response.contentAsString)["data"]["orderId"].asLong()
 
@@ -234,8 +242,8 @@ class OrderControllerTest {
     }
 
     private fun createPaidOrder(count: Int = 1): Order {
-        product.stockCount -= count
-        productRepository.save(product)
+        productOption.stockCount -= count
+        productOptionRepository.save(productOption)
 
         val order = orderRepository.save(
             Order.of(
@@ -246,7 +254,7 @@ class OrderControllerTest {
             )
         )
         orderItemRepository.save(
-            OrderItem.of(order = order, product = product, price = product.price.toLong(), count = count)
+            OrderItem.of(order = order, productOption = productOption, price = product.price.toLong(), count = count)
         )
         order.markPaid()
         orderRepository.save(order)
@@ -290,7 +298,7 @@ class OrderControllerTest {
 
         assertThat(orderRepository.findById(order.id).get().status).isEqualTo(OrderStatus.CANCELLED)
         assertThat(paymentRepository.findByOrderId(order.id)!!.status).isEqualTo(PaymentStatus.CANCELED)
-        assertThat(productRepository.findById(product.id).get().stockCount).isEqualTo(5)
+        assertThat(productOptionRepository.findById(productOption.id).get().stockCount).isEqualTo(5)
     }
 
     @Test
@@ -306,7 +314,7 @@ class OrderControllerTest {
         assertThat(result.response.status).isEqualTo(502)
         assertThat(orderRepository.findById(order.id).get().status).isEqualTo(OrderStatus.PAID)
         assertThat(paymentRepository.findByOrderId(order.id)!!.status).isEqualTo(PaymentStatus.DONE)
-        assertThat(productRepository.findById(product.id).get().stockCount).isEqualTo(3)
+        assertThat(productOptionRepository.findById(productOption.id).get().stockCount).isEqualTo(3)
     }
 
     @Test
@@ -332,7 +340,7 @@ class OrderControllerTest {
         val createResult = mockMvc.post(BASE_URL) {
             header(HttpHeaders.AUTHORIZATION, authHeader())
             contentType = MediaType.APPLICATION_JSON
-            content = orderRequestBody(deliveryOption.id, product.id, 1)
+            content = orderRequestBody(deliveryOption.id, productOption.id, 1)
         }.andReturn()
         val orderId = objectMapper.readTree(createResult.response.contentAsString)["data"]["orderId"].asLong()
 

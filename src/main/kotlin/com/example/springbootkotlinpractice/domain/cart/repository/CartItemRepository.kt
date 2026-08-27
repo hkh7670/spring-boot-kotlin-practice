@@ -9,7 +9,7 @@ interface CartItemRepository : JpaRepository<CartItem, Long> {
 
     fun findByMemberId(memberId: Long): List<CartItem>
 
-    fun findByMemberIdAndProductId(memberId: Long, productId: Long): CartItem?
+    fun findByMemberIdAndProductOptionId(memberId: Long, productOptionId: Long): CartItem?
 
-    fun deleteByMemberIdAndProductId(memberId: Long, productId: Long)
+    fun deleteByMemberIdAndProductOptionId(memberId: Long, productOptionId: Long)
 }
