@@ -14,6 +14,23 @@ CREATE TABLE admins
 )
     COMMENT '관리자 정보';
 
+CREATE TABLE cart_items
+(
+    id               BIGINT AUTO_INCREMENT
+        PRIMARY KEY,
+    member_id        BIGINT      NOT NULL COMMENT '장바구니 소유 회원 ID (members.id)',
+    product_id       BIGINT      NOT NULL COMMENT '상품 ID (products.id)',
+    count            INT         NOT NULL COMMENT '담은 수량',
+    created_datetime DATETIME(6) NOT NULL,
+    updated_datetime DATETIME(6) NOT NULL,
+    CONSTRAINT uq_cart_items_01
+        UNIQUE (member_id, product_id)
+)
+    COMMENT '회원별 장바구니 상품';
+
+CREATE INDEX idx_cart_items_01
+    ON cart_items (member_id);
+
 CREATE TABLE categories
 (
     id               BIGINT AUTO_INCREMENT

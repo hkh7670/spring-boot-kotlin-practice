@@ -66,7 +66,7 @@ class SecurityConfig(
                 "http://localhost:5174",
                 "http://hkh7670.iptime.org:8080",
             )
-            allowedMethods = listOf("GET", "POST")
+            allowedMethods = listOf("GET", "POST", "PATCH", "DELETE")
             allowedHeaders = listOf("Content-Type", "Authorization")
         }
         return UrlBasedCorsConfigurationSource().apply {
