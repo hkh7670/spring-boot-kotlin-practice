@@ -142,12 +142,13 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 - `OrderService.getOrders()`(주문 목록, 사용자 인증 필요): 마찬가지로 `OrderItemRepository.findByOrderIdIn()`
   배치조회로 대표 상품명 + 건수만 요약해 반환.
 
-## 상품 옵션(`ProductOption`) — 재고는 옵션 단위로만 관리
+## 상품 옵션(`ProductOption`) — 가격/재고 둘 다 옵션 단위로만 관리
 
 상품구매 시 옵션(사이즈/색상 등)을 지정할 수 있도록, `products` 하위에 `product_options`
-테이블(1:N)을 추가하고 재고 관리를 전부 옵션 레벨로 이전했다. **모든 `Product`는 최소 1개의
-`ProductOption`을 가진다** — 옵션이 실제로 없는 단순 상품도 "기본" 옵션 1개로 취급 (하이브리드
-아님, 재고 조회/차감 경로가 항상 하나로 통일됨). `products.stock_count` 컬럼은 완전히 제거됨.
+테이블(1:N)을 추가하고 **가격과 재고 둘 다** 옵션 레벨로 이전했다. **모든 `Product`는 최소
+1개의 `ProductOption`을 가진다** — 옵션이 실제로 없는 단순 상품도 "기본" 옵션 1개로 취급
+(하이브리드 아님, 조회/차감 경로가 항상 하나로 통일됨). `products.stock_count`/`price` 컬럼은
+완전히 제거됨 — `Product`에는 이제 이름/설명/이미지/카테고리/업체 정보만 남는다.
 
 - `ProductOption`은 `OrderItem`과 동일하게(이 코드베이스에서 `@ManyToOne`을 쓰는 유이한 두 엔티티)
   `Product`를 `@ManyToOne(FetchType.LAZY)`로 참조한다 — `Product`/`Category`/`CartItem`처럼 raw
@@ -156,12 +157,18 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 - 재고 차감/복구(`decreaseStock`/`increaseStock`, 조건부 원자적 UPDATE)가 `ProductRepository`에서
   `ProductOptionRepository`로 완전히 이동. `OrderItem.product` 필드도 `OrderItem.productOption`으로
   교체(FK `order_items.product_option_id`) — 상품 정보는 `orderItem.productOption.product`로 접근.
-- `GET /api/v1/products/{id}` 응답은 스칼라 `stockCount` 대신 `productOptions: [{id, name,
-  stockCount}]` 배열을 반환 (옵션 선택 UI 근거). 목록(`GET /api/v1/products`)의 `stockCount`는
-  이름은 그대로지만 값은 `ProductOptionRepository.sumStockByProductIdIn()`으로 구한 옵션별 합계.
+  가격도 `productOption.price`가 유일한 소스 — `OrderService.createOrder()`의 총액 계산과
+  `OrderItem.price` 스냅샷 둘 다 여기서만 읽는다.
+- `GET /api/v1/products/{id}` 응답은 스칼라 `price`/`stockCount` 대신 `productOptions: [{id,
+  name, price, stockCount}]` 배열만 반환 (옵션 선택 UI 근거, 옵션마다 가격이 다를 수 있음).
+  목록(`GET /api/v1/products`)의 `price`/`stockCount`는 필드명은 그대로지만 값은
+  `ProductOptionRepository.findAggregatesByProductIdIn()`(옵션별 재고 SUM + 최저가 MIN을 한
+  쿼리로 같이 집계)로 구한 "최저가/총재고" — 옵션을 아직 안 고른 목록 화면에서 실제 쇼핑몰의
+  "OO원부터" 표시와 동일한 패턴.
 - `ProductOptionRepository`에 fetch join 메서드 2개(`findByIdFetchProduct`/`findByIdInFetchProduct`)를
-  둬서 옵션 조회 시 부모 `Product`를 한 번에 가져온다 (주문 생성 시 가격 계산, 장바구니 조회 양쪽에서
-  N+1 없이 `productOption.product.price`/`.name` 접근 가능).
+  둬서 옵션 조회 시 부모 `Product`를 한 번에 가져온다 (주문 생성 시 `productOption.product.name`
+  등 상품 메타정보 접근, 장바구니 조회 양쪽에서 N+1 없이 가능 — 가격 자체는 `Product`가 아니라
+  `productOption.price`에서 바로 나오므로 이 fetch join과 무관).
 
 ## 장바구니 API (`domain/cart`)
 

@@ -71,7 +71,7 @@ class CartService(
                 productId = productOption.product.id,
                 productName = productOption.product.name,
                 optionName = productOption.name,
-                price = productOption.product.price,
+                price = productOption.price,
                 imageUrl = productOption.product.imageUrl,
                 count = cartItem.count,
                 soldOut = productOption.stockCount <= 0,

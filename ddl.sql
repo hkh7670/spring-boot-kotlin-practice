@@ -162,6 +162,7 @@ CREATE TABLE product_options
         PRIMARY KEY,
     product_id       BIGINT        NOT NULL COMMENT '상품 ID (products.id)',
     name             VARCHAR(100)  NOT NULL COMMENT '옵션 명 (예: 블랙 / L사이즈)',
+    price            INT           NOT NULL COMMENT '옵션별 가격',
     stock_count      INT DEFAULT 0 NOT NULL COMMENT '옵션별 재고 수량',
     created_datetime DATETIME(6)   NOT NULL,
     updated_datetime DATETIME(6)   NOT NULL,
@@ -178,7 +179,6 @@ CREATE TABLE products
     id               BIGINT AUTO_INCREMENT
         PRIMARY KEY,
     name             VARCHAR(50)   NOT NULL COMMENT '상품 명',
-    price            INT           NOT NULL COMMENT '가격',
     stock_count      INT DEFAULT 0 NOT NULL COMMENT '재고 수량',
     description      TEXT          NULL COMMENT '상품 상세 설명',
     image_url        VARCHAR(500)  NULL COMMENT '대표 이미지 URL',
@@ -225,9 +225,13 @@ ALTER TABLE products
 ALTER TABLE products
     ADD COLUMN image_url VARCHAR(500) NULL COMMENT '대표 이미지 URL' AFTER description;
 
--- 기존 DB의 products 테이블에서 stock_count 컬럼을 제거할 때 사용 (product_options로 재고 이전 완료 후 실행)
+-- 기존 DB의 products 테이블에서 stock_count, price 컬럼을 제거할 때 사용
+-- (product_options로 재고+가격 이전 완료 후 실행 — 기존 row가 있다면 product_options 백필 시
+--  stock_count뿐 아니라 price도 함께 채워야 함)
 ALTER TABLE products
     DROP COLUMN stock_count;
+ALTER TABLE products
+    DROP COLUMN price;
 
 -- 기존 DB의 order_items 테이블의 product_id를 product_option_id로 교체할 때 사용
 -- 주의: 기존 row가 있으면 NOT NULL 추가 전에 product_option_id 백필 또는 해당 row 삭제가 필요함

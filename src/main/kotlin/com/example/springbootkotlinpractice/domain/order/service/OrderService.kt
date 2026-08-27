@@ -45,7 +45,7 @@ class OrderService(
             }
         }
 
-        val productTotalPrice = orderItems.sumOf { (productOption, count) -> productOption.product.price * count }
+        val productTotalPrice = orderItems.sumOf { (productOption, count) -> productOption.price * count }
 
         val savedOrder = orderRepository.save(
             Order.of(
@@ -61,7 +61,7 @@ class OrderService(
                 OrderItem.of(
                     order = savedOrder,
                     productOption = productOption,
-                    price = productOption.product.price.toLong(),
+                    price = productOption.price.toLong(),
                     count = count,
                 )
             }

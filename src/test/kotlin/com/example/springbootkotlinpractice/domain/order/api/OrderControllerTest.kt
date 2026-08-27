@@ -114,8 +114,10 @@ class OrderControllerTest {
         )
         accessToken = jwtTokenProvider.createAccessToken(member.id, member.email, member.joinProvider, member.role)
 
-        product = productRepository.save(Product(name = "테스트 상품", price = 10_000))
-        productOption = productOptionRepository.save(ProductOption.of(product = product, name = "기본", stockCount = 5))
+        product = productRepository.save(Product(name = "테스트 상품"))
+        productOption = productOptionRepository.save(
+            ProductOption.of(product = product, name = "기본", price = 10_000, stockCount = 5)
+        )
         deliveryOption = deliveryOptionRepository.save(DeliveryOption(name = "기본 배송", price = 3_000))
     }
 
@@ -248,13 +250,13 @@ class OrderControllerTest {
         val order = orderRepository.save(
             Order.of(
                 memberId = member.id,
-                productTotalPrice = product.price * count,
+                productTotalPrice = productOption.price * count,
                 deliveryOptionId = deliveryOption.id,
                 deliveryPrice = deliveryOption.price,
             )
         )
         orderItemRepository.save(
-            OrderItem.of(order = order, productOption = productOption, price = product.price.toLong(), count = count)
+            OrderItem.of(order = order, productOption = productOption, price = productOption.price.toLong(), count = count)
         )
         order.markPaid()
         orderRepository.save(order)
@@ -263,7 +265,7 @@ class OrderControllerTest {
             Payment.of(
                 orderId = order.id,
                 paymentKey = FAKE_PAYMENT_KEY,
-                amount = product.price * count,
+                amount = productOption.price * count,
                 status = PaymentStatus.DONE,
                 method = "카드",
                 approvedAt = LocalDateTime.now(),

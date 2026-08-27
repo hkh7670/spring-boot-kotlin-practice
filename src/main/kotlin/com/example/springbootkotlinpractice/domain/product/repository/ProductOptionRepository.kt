@@ -12,12 +12,13 @@ interface ProductOptionRepository : JpaRepository<ProductOption, Long> {
 
     fun findByProductId(productId: Long): List<ProductOption>
 
-    // 상품 목록 화면의 상품별 재고 합계(품절 배지)용 배치 집계
+    // 상품 목록 화면의 상품별 재고 합계(품절 배지) + 최저가("N원부터")용 배치 집계
     @Query(
-        "SELECT po.product.id AS productId, COALESCE(SUM(po.stockCount), 0) AS totalStock " +
+        "SELECT po.product.id AS productId, COALESCE(SUM(po.stockCount), 0) AS totalStock, " +
+                "COALESCE(MIN(po.price), 0) AS minPrice " +
                 "FROM ProductOption po WHERE po.product.id IN :productIds GROUP BY po.product.id"
     )
-    fun sumStockByProductIdIn(@Param("productIds") productIds: List<Long>): List<ProductStockSum>
+    fun findAggregatesByProductIdIn(@Param("productIds") productIds: List<Long>): List<ProductOptionAggregate>
 
     // 단건 조회 시 Product를 함께 fetch join (주문 생성 시 가격 계산에 필요)
     @Query("SELECT po FROM ProductOption po JOIN FETCH po.product WHERE po.id = :id")
@@ -47,7 +48,8 @@ interface ProductOptionRepository : JpaRepository<ProductOption, Long> {
     ): Int
 }
 
-interface ProductStockSum {
+interface ProductOptionAggregate {
     fun getProductId(): Long
     fun getTotalStock(): Long
+    fun getMinPrice(): Long
 }

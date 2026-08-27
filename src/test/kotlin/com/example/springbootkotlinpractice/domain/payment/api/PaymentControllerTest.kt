@@ -117,9 +117,14 @@ class PaymentControllerTest {
 
         val deliveryOption = deliveryOptionRepository.save(DeliveryOption(name = "기본 배송", price = DELIVERY_PRICE))
         // 재고 3개 중 1개가 이 주문 생성 시점에 이미 차감된 상태(2개 남음)를 흉내낸다.
-        product = productRepository.save(Product(name = "테스트 상품", price = PRODUCT_TOTAL_PRICE))
+        product = productRepository.save(Product(name = "테스트 상품"))
         productOption = productOptionRepository.save(
-            ProductOption.of(product = product, name = "기본", stockCount = ORIGINAL_STOCK_COUNT - ORDER_ITEM_COUNT)
+            ProductOption.of(
+                product = product,
+                name = "기본",
+                price = PRODUCT_TOTAL_PRICE,
+                stockCount = ORIGINAL_STOCK_COUNT - ORDER_ITEM_COUNT,
+            )
         )
         order = orderRepository.save(
             Order.of(

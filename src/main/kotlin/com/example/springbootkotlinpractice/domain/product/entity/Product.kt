@@ -18,10 +18,6 @@ class Product(
     @Column(name = "name", nullable = false, length = 50)
     var name: String,
 
-    @Comment("가격")
-    @Column(name = "price", nullable = false)
-    var price: Int,
-
     @Comment("상품 상세 설명")
     @Column(name = "description", nullable = true, columnDefinition = "TEXT")
     var description: String? = null,
@@ -48,7 +44,6 @@ class Product(
     companion object {
         fun of(
             name: String,
-            price: Int,
             description: String? = null,
             imageUrl: String? = null,
             categoryId: Long? = null,
@@ -56,7 +51,6 @@ class Product(
         ): Product {
             return Product(
                 name = name,
-                price = price,
                 description = description,
                 imageUrl = imageUrl,
                 categoryId = categoryId,
