@@ -3,6 +3,8 @@ package com.example.springbootkotlinpractice.domain.order.repository
 import com.example.springbootkotlinpractice.domain.order.entity.Order
 import com.example.springbootkotlinpractice.enums.OrderStatus
 import java.time.LocalDateTime
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 
@@ -14,4 +16,6 @@ interface OrderRepository : JpaRepository<Order, Long> {
     fun findByIdAndMemberId(id: Long, memberId: Long): Order?
 
     fun findByStatusAndCreatedDatetimeBefore(status: OrderStatus, createdDatetime: LocalDateTime): List<Order>
+
+    fun findByMemberId(memberId: Long, pageable: Pageable): Page<Order>
 }

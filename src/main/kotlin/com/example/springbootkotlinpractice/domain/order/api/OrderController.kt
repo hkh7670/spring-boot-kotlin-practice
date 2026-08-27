@@ -1,6 +1,7 @@
 package com.example.springbootkotlinpractice.domain.order.api
 
 import com.example.springbootkotlinpractice.common.dto.CommonResponse
+import com.example.springbootkotlinpractice.common.dto.PageResponse
 import com.example.springbootkotlinpractice.common.dto.ResponseHandler
 import com.example.springbootkotlinpractice.common.security.UserPrincipal
 import com.example.springbootkotlinpractice.domain.order.dto.OrderCancelResponse
@@ -8,6 +9,7 @@ import com.example.springbootkotlinpractice.domain.order.dto.OrderCreateRequest
 import com.example.springbootkotlinpractice.domain.order.dto.OrderCreateResponse
 import com.example.springbootkotlinpractice.domain.order.dto.OrderDetailResponse
 import com.example.springbootkotlinpractice.domain.order.dto.OrderStatusResponse
+import com.example.springbootkotlinpractice.domain.order.dto.OrderSummaryResponse
 import com.example.springbootkotlinpractice.domain.order.service.OrderCancelService
 import com.example.springbootkotlinpractice.domain.order.service.OrderReturnService
 import com.example.springbootkotlinpractice.domain.order.service.OrderService
@@ -16,6 +18,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -45,6 +49,21 @@ class OrderController(
     ): ResponseEntity<CommonResponse<OrderCreateResponse>> {
         val response = orderService.createOrder(userPrincipal.id, request)
         return ResponseHandler.created(response)
+    }
+
+    @Operation(
+        summary = "내 주문 목록 조회 API",
+        description = "본인 주문 목록을 페이징 조회한다.",
+    )
+    @PreAuthorize("hasRole('USER')")
+    @GetMapping
+    fun getOrders(
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<CommonResponse<PageResponse<OrderSummaryResponse>>> {
+        val response = orderService.getOrders(userPrincipal.id, PageRequest.of(page, size, Sort.by("id").descending()))
+        return ResponseHandler.ok(response)
     }
 
     @Operation(

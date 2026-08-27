@@ -41,7 +41,7 @@ common/            도메인 무관 공통 코드 (config, security(JWT), oauth/
 domain/
   auth/            로그인/회원가입/토큰 재발급
   member/          회원 조회
-  order/           주문 생성/조회/취소/반품, 배송 상태 전환, 상태 이력, 만료 주문 취소 배치
+  order/           주문 생성/목록·단건 조회/취소/반품, 배송 상태 전환, 상태 이력, 만료 주문 취소 배치
     api/           OrderController(사용자), AdminOrderController(관리자: 배송/반품완료)
     event/         OrderPaidEvent/OrderCancelledEvent + Publisher/Relay/Listener (Kafka)
     service/       OrderService, OrderCancelService(+RecordService), OrderReturnService(+RecordService),
@@ -139,6 +139,8 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
   스킵 — 카테고리/검색어 결과가 없는 흔한 케이스에서 불필요한 쿼리 한 번을 아낀다.
 - `ProductService.getProducts()`: 상품 목록에 표시할 `vendorName`을 상품별로 조회하지 않고
   `vendorRepository.findAllById()`로 배치 조회 후 `Map`으로 매칭 (N+1 방지, 쿼리 2번 고정).
+- `OrderService.getOrders()`(주문 목록, 사용자 인증 필요): 마찬가지로 `OrderItemRepository.findByOrderIdIn()`
+  배치조회로 대표 상품명 + 건수만 요약해 반환.
 
 ## Kafka (`domain/order/event`)
 
@@ -177,7 +179,7 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 - **테스트 공백** (향후 보강 필요, 요청 전엔 먼저 손대지 않기): `AuthService` reissue/rotation,
   `AuthEmailController` login/signup, `OrderShippingService`/`OrderReturnService` 전체(구현만 하고
   비용 문제로 테스트 미작성), `ProductController`/`CategoryController`/`DeliveryOptionController`(신규
-  조회 API) — 전부 구현만 하고 테스트 미작성.
+  조회 API), `OrderController.getOrders()`(목록 API) — 전부 구현만 하고 테스트 미작성.
 
 ## 배포
 

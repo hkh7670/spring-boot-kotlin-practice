@@ -1,11 +1,13 @@
 package com.example.springbootkotlinpractice.domain.order.service
 
+import com.example.springbootkotlinpractice.common.dto.PageResponse
 import com.example.springbootkotlinpractice.domain.delivery.entity.DeliveryOption
 import com.example.springbootkotlinpractice.domain.delivery.repository.DeliveryOptionRepository
 import com.example.springbootkotlinpractice.domain.order.dto.OrderCreateRequest
 import com.example.springbootkotlinpractice.domain.order.dto.OrderCreateResponse
 import com.example.springbootkotlinpractice.domain.order.dto.OrderDetailResponse
 import com.example.springbootkotlinpractice.domain.order.dto.OrderItemResponse
+import com.example.springbootkotlinpractice.domain.order.dto.OrderSummaryResponse
 import com.example.springbootkotlinpractice.domain.order.entity.Order
 import com.example.springbootkotlinpractice.domain.order.entity.OrderItem
 import com.example.springbootkotlinpractice.domain.order.entity.OrderStatusHistory
@@ -17,6 +19,7 @@ import com.example.springbootkotlinpractice.domain.product.repository.ProductRep
 import com.example.springbootkotlinpractice.enums.OrderStatus
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
+import org.springframework.data.domain.Pageable
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -96,6 +99,27 @@ class OrderService(
                     count = it.count
                 )
             },
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getOrders(memberId: Long, pageable: Pageable): PageResponse<OrderSummaryResponse> {
+        val orders = orderRepository.findByMemberId(memberId, pageable)
+        val itemsByOrderId = orderItemRepository.findByOrderIdIn(orders.content.map { it.id })
+            .groupBy { it.order.id }
+
+        return PageResponse.of(
+            orders.map { order ->
+                val items = itemsByOrderId[order.id].orEmpty()
+                OrderSummaryResponse(
+                    orderId = order.id,
+                    orderUid = order.orderUid,
+                    status = order.status,
+                    totalPrice = order.productTotalPrice + order.deliveryPrice,
+                    representativeProductName = items.firstOrNull()?.product?.name.orEmpty(),
+                    itemCount = items.size,
+                )
+            }
         )
     }
 
