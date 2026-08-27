@@ -25,12 +25,18 @@ interface OrderRepository : JpaRepository<Order, Long> {
     // 현재 상태가 expectedStatus일 때만 newStatus로 원자적으로 전이하고 영향받은 row 수를 반환한다
     // (decreaseStock()과 동일한 조건부 UPDATE 패턴). 0이면 이미 다른 동시 요청이 처리했다는 뜻이므로
     // 호출자는 재고복구/이벤트발행 같은 후속 부수효과를 건너뛰어야 한다 — 중복 요청(더블클릭, 네트워크
-    // 재시도, React StrictMode 이중 마운트 등)에 대한 동시성 방어용.
+    // 재시도, React StrictMode 이중 마운트 등)에 대한 동시성 방어용. 벌크 UPDATE는 JPA
+    // Auditing(@LastModifiedDate)을 안 타므로 updated_datetime을 직접 갱신한다. 네이티브 쿼리라
+    // OrderStatus는 enum 바인딩 모호성을 피하기 위해 .name(문자열)으로 전달받는다.
     @Modifying
-    @Query("UPDATE Order o SET o.status = :newStatus WHERE o.id = :orderId AND o.status = :expectedStatus")
+    @Query(
+        value = "UPDATE orders SET status = :newStatus, updated_datetime = NOW(6) " +
+                "WHERE id = :orderId AND status = :expectedStatus",
+        nativeQuery = true,
+    )
     fun updateStatusIfCurrent(
         @Param("orderId") orderId: Long,
-        @Param("expectedStatus") expectedStatus: OrderStatus,
-        @Param("newStatus") newStatus: OrderStatus,
+        @Param("expectedStatus") expectedStatus: String,
+        @Param("newStatus") newStatus: String,
     ): Int
 }

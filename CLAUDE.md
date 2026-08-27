@@ -139,6 +139,13 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 ## 주문/결제 기타 컨벤션
 
 - 재고 차감/복구는 조건부 UPDATE(`decreaseStock`/`increaseStock`)로 원자적 처리, 초과판매 방지.
+- `@Modifying` 벌크 UPDATE(`decreaseStock`/`increaseStock`/`updateStatusIfCurrent`)는 JPA
+  Auditing(`@LastModifiedDate`)이 안 타므로(엔티티 생명주기 콜백을 거치지 않음) `updated_datetime`을
+  쿼리 안에서 `NOW(6)`으로 직접 갱신해야 한다 — 안 그러면 실제로 변경된 row인데도 수정일시가 그대로
+  남는다. `OrderRepository.updateStatusIfCurrent()`는 enum(`OrderStatus`) 파라미터를 네이티브 쿼리에
+  바인딩할 때의 ordinal/string 모호성을 피하려고 `nativeQuery = true` + `.name`(문자열)으로 받는다
+  (JPQL이었다면 `@Enumerated(EnumType.STRING)` 매핑을 그대로 타서 문제없지만, 벌크 UPDATE에 `NOW(6)`을
+  쓰려면 MySQL 네이티브 함수라 JPQL로는 못 쓰고 네이티브 쿼리로 전환해야 했음).
 - 가격은 주문 시점 스냅샷(`OrderItem.price`, `Order.deliveryPrice`) 사용 — 라이브 조회값 재계산 금지.
 - `OrderStatusHistory`가 모든 상태 전이를 append-only로 기록 (FK 제약 의도적으로 없음).
 - `StaleOrderCancelScheduler`가 10분마다 생성 10분 초과 `PENDING_PAYMENT` 주문을 취소+재고복구.

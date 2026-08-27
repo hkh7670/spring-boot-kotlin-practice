@@ -29,10 +29,12 @@ interface ProductOptionRepository : JpaRepository<ProductOption, Long> {
     fun findByIdInFetchProduct(@Param("ids") ids: List<Long>): List<ProductOption>
 
     // 재고가 충분할 때만 원자적으로 차감한다 (동시 주문에 의한 초과 판매 방지). 반환값이 0이면 재고 부족을 의미한다.
+    // 벌크 UPDATE는 JPA Auditing(@LastModifiedDate)을 안 타므로 updated_datetime을 직접 갱신한다.
     @Modifying
     @Query(
-        "UPDATE ProductOption po SET po.stockCount = po.stockCount - :count " +
-                "WHERE po.id = :productOptionId AND po.stockCount >= :count"
+        value = "UPDATE product_options SET stock_count = stock_count - :count, updated_datetime = NOW(6) " +
+                "WHERE id = :productOptionId AND stock_count >= :count",
+        nativeQuery = true,
     )
     fun decreaseStock(
         @Param("productOptionId") productOptionId: Long,
@@ -41,7 +43,11 @@ interface ProductOptionRepository : JpaRepository<ProductOption, Long> {
 
     // 결제 실패/취소/반품으로 차감된 재고를 복구한다.
     @Modifying
-    @Query("UPDATE ProductOption po SET po.stockCount = po.stockCount + :count WHERE po.id = :productOptionId")
+    @Query(
+        value = "UPDATE product_options SET stock_count = stock_count + :count, updated_datetime = NOW(6) " +
+                "WHERE id = :productOptionId",
+        nativeQuery = true,
+    )
     fun increaseStock(
         @Param("productOptionId") productOptionId: Long,
         @Param("count") count: Int

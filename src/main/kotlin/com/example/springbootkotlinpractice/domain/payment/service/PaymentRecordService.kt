@@ -43,7 +43,7 @@ class PaymentRecordService(
 
         // 동시 중복 confirm 요청 방어 — 원자적 조건부 UPDATE로 PENDING_PAYMENT 상태일 때만 전이시킨다.
         // 0건이면 이미 다른 요청이 먼저 처리한 것이므로 Payment 중복 생성/이벤트 중복 발행을 막는다.
-        val updatedRows = orderRepository.updateStatusIfCurrent(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID)
+        val updatedRows = orderRepository.updateStatusIfCurrent(orderId, OrderStatus.PENDING_PAYMENT.name, OrderStatus.PAID.name)
         if (updatedRows == 0) {
             throw ApiErrorException(ResponseCodeEnum.ALREADY_PAID_ORDER)
         }
@@ -93,7 +93,7 @@ class PaymentRecordService(
         // 동시 중복 confirm-실패 요청 방어(더블클릭, React StrictMode 이중 마운트 등) — 원자적 조건부
         // UPDATE로 PENDING_PAYMENT 상태일 때만 취소 처리한다. 0건이면 이미 다른 요청이 취소+재고복구를
         // 끝냈다는 뜻이므로 재고 중복 복구를 막기 위해 조용히 종료한다.
-        val updatedRows = orderRepository.updateStatusIfCurrent(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED)
+        val updatedRows = orderRepository.updateStatusIfCurrent(orderId, OrderStatus.PENDING_PAYMENT.name, OrderStatus.CANCELLED.name)
         if (updatedRows == 0) {
             return
         }
