@@ -16,19 +16,22 @@ VALUES (NULL, '디지털/가전', 'LARGE', NOW(), NOW()),
        (NULL, '식품', 'LARGE', NOW(), NOW());
 
 -- 중분류
+-- MySQL은 INSERT 대상 테이블(categories)을 같은 문장의 서브쿼리 FROM절에서 그대로 재참조하는 것을
+-- 금지한다(1093 에러) — 서브쿼리를 한 번 더 파생 테이블로 감싸 미리 결과를 만들어두면(materialize)
+-- 이 제약을 우회할 수 있다.
 INSERT INTO categories (parent_id, name, level, created_datetime, updated_datetime)
-VALUES ((SELECT id FROM categories WHERE name = '디지털/가전' AND level = 'LARGE'), '노트북/PC', 'MEDIUM', NOW(), NOW()),
-       ((SELECT id FROM categories WHERE name = '패션/뷰티' AND level = 'LARGE'), '남성 의류', 'MEDIUM', NOW(), NOW()),
-       ((SELECT id FROM categories WHERE name = '식품' AND level = 'LARGE'), '간편식', 'MEDIUM', NOW(), NOW());
+VALUES ((SELECT id FROM (SELECT id FROM categories WHERE name = '디지털/가전' AND level = 'LARGE') AS t), '노트북/PC', 'MEDIUM', NOW(), NOW()),
+       ((SELECT id FROM (SELECT id FROM categories WHERE name = '패션/뷰티' AND level = 'LARGE') AS t), '남성 의류', 'MEDIUM', NOW(), NOW()),
+       ((SELECT id FROM (SELECT id FROM categories WHERE name = '식품' AND level = 'LARGE') AS t), '간편식', 'MEDIUM', NOW(), NOW());
 
--- 소분류
+-- 소분류 (위와 동일한 이유로 서브쿼리를 파생 테이블로 감쌈)
 INSERT INTO categories (parent_id, name, level, created_datetime, updated_datetime)
-VALUES ((SELECT id FROM categories WHERE name = '노트북/PC' AND level = 'MEDIUM'), '노트북', 'SMALL', NOW(), NOW()),
-       ((SELECT id FROM categories WHERE name = '노트북/PC' AND level = 'MEDIUM'), '키보드/마우스', 'SMALL', NOW(), NOW()),
-       ((SELECT id FROM categories WHERE name = '남성 의류' AND level = 'MEDIUM'), '상의', 'SMALL', NOW(), NOW()),
-       ((SELECT id FROM categories WHERE name = '남성 의류' AND level = 'MEDIUM'), '하의', 'SMALL', NOW(), NOW()),
-       ((SELECT id FROM categories WHERE name = '간편식' AND level = 'MEDIUM'), '과자/스낵', 'SMALL', NOW(), NOW()),
-       ((SELECT id FROM categories WHERE name = '간편식' AND level = 'MEDIUM'), '음료', 'SMALL', NOW(), NOW());
+VALUES ((SELECT id FROM (SELECT id FROM categories WHERE name = '노트북/PC' AND level = 'MEDIUM') AS t), '노트북', 'SMALL', NOW(), NOW()),
+       ((SELECT id FROM (SELECT id FROM categories WHERE name = '노트북/PC' AND level = 'MEDIUM') AS t), '키보드/마우스', 'SMALL', NOW(), NOW()),
+       ((SELECT id FROM (SELECT id FROM categories WHERE name = '남성 의류' AND level = 'MEDIUM') AS t), '상의', 'SMALL', NOW(), NOW()),
+       ((SELECT id FROM (SELECT id FROM categories WHERE name = '남성 의류' AND level = 'MEDIUM') AS t), '하의', 'SMALL', NOW(), NOW()),
+       ((SELECT id FROM (SELECT id FROM categories WHERE name = '간편식' AND level = 'MEDIUM') AS t), '과자/스낵', 'SMALL', NOW(), NOW()),
+       ((SELECT id FROM (SELECT id FROM categories WHERE name = '간편식' AND level = 'MEDIUM') AS t), '음료', 'SMALL', NOW(), NOW());
 
 INSERT INTO products (name, price, description, image_url, category_id, vendor_id, created_datetime, updated_datetime)
 VALUES ('울트라 노트북 14인치', 1290000, '가볍고 빠른 14인치 노트북입니다.',
