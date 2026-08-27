@@ -30,7 +30,12 @@ class PaymentService(
         validateAmount(expectedAmount, request.amount)
 
         val tossResponse = confirmToss(order.id, request)
-        validateAmount(expectedAmount, tossResponse.totalAmount)
+        if (expectedAmount != tossResponse.totalAmount) {
+            // Toss는 이미 승인을 완료한 상태이므로, 우리 쪽에서 신뢰할 수 없는 결제로 판단해
+            // 주문을 취소하고 재고를 복구한다 (Toss 결제 자체의 환불은 범위 밖 — 별도 처리 필요).
+            paymentRecordService.cancelOrderAndRestoreStock(order.id)
+            throw ApiErrorException(ResponseCodeEnum.PAYMENT_AMOUNT_MISMATCH)
+        }
 
         return paymentRecordService.completePayment(order.id, tossResponse)
     }
