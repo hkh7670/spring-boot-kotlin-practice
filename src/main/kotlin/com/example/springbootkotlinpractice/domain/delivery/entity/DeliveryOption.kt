@@ -28,4 +28,10 @@ class DeliveryOption(
     @Column(name = "id")
     @Comment("배송 정보 고유 식별자")
     val id: Long = 0L
+
+    companion object {
+        fun of(name: String, price: Int): DeliveryOption {
+            return DeliveryOption(name = name, price = price)
+        }
+    }
 }

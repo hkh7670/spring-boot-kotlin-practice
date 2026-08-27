@@ -146,6 +146,8 @@ CREATE TABLE products
     name             VARCHAR(50)   NOT NULL COMMENT '상품 명',
     price            INT           NOT NULL COMMENT '가격',
     stock_count      INT DEFAULT 0 NOT NULL COMMENT '재고 수량',
+    description      TEXT          NULL COMMENT '상품 상세 설명',
+    image_url        VARCHAR(500)  NULL COMMENT '대표 이미지 URL',
     category_id      BIGINT        NULL COMMENT '카테고리 ID (categories.id, 소분류)',
     vendor_id        BIGINT        NULL COMMENT '업체 ID (vendors.id)',
     created_datetime DATETIME(6)   NOT NULL,
@@ -182,4 +184,10 @@ CREATE INDEX idx_products_01
 
 CREATE INDEX idx_products_02
     ON products (vendor_id);
+
+-- 기존 DB의 products 테이블에 description, image_url 컬럼을 추가할 때 사용
+ALTER TABLE products
+    ADD COLUMN description TEXT NULL COMMENT '상품 상세 설명' AFTER stock_count;
+ALTER TABLE products
+    ADD COLUMN image_url VARCHAR(500) NULL COMMENT '대표 이미지 URL' AFTER description;
 

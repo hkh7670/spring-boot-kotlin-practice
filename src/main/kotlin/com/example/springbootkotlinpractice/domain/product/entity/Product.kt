@@ -26,6 +26,14 @@ class Product(
     @Column(name = "stock_count", nullable = false)
     var stockCount: Int = 0,
 
+    @Comment("상품 상세 설명")
+    @Column(name = "description", nullable = true, columnDefinition = "TEXT")
+    var description: String? = null,
+
+    @Comment("대표 이미지 URL")
+    @Column(name = "image_url", nullable = true, length = 500)
+    var imageUrl: String? = null,
+
     @Comment("카테고리 ID (categories.id, 소분류)")
     @Column(name = "category_id", nullable = true)
     var categoryId: Long? = null,
@@ -40,4 +48,26 @@ class Product(
     @Column(name = "id")
     @Comment("상품 고유 식별자")
     val id: Long = 0L
+
+    companion object {
+        fun of(
+            name: String,
+            price: Int,
+            stockCount: Int = 0,
+            description: String? = null,
+            imageUrl: String? = null,
+            categoryId: Long? = null,
+            vendorId: Long? = null,
+        ): Product {
+            return Product(
+                name = name,
+                price = price,
+                stockCount = stockCount,
+                description = description,
+                imageUrl = imageUrl,
+                categoryId = categoryId,
+                vendorId = vendorId,
+            )
+        }
+    }
 }

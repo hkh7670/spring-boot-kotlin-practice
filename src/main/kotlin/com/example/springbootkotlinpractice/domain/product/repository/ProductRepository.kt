@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 
 @Repository
-interface ProductRepository : JpaRepository<Product, Long> {
+interface ProductRepository : JpaRepository<Product, Long>, ProductRepositoryCustom {
 
     // 재고가 충분할 때만 원자적으로 차감한다 (동시 주문에 의한 초과 판매 방지). 반환값이 0이면 재고 부족을 의미한다.
     @Modifying

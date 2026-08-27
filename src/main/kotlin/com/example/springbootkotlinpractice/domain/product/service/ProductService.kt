@@ -1,0 +1,74 @@
+package com.example.springbootkotlinpractice.domain.product.service
+
+import com.example.springbootkotlinpractice.common.dto.PageResponse
+import com.example.springbootkotlinpractice.domain.category.repository.CategoryRepository
+import com.example.springbootkotlinpractice.domain.product.dto.ProductDetailResponse
+import com.example.springbootkotlinpractice.domain.product.dto.ProductSummaryResponse
+import com.example.springbootkotlinpractice.domain.product.entity.Product
+import com.example.springbootkotlinpractice.domain.product.repository.ProductRepository
+import com.example.springbootkotlinpractice.domain.vendor.repository.VendorRepository
+import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
+import com.example.springbootkotlinpractice.exception.ApiErrorException
+import org.springframework.data.domain.Pageable
+import org.springframework.data.repository.findByIdOrNull
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.util.CollectionUtils
+
+@Service
+class ProductService(
+    private val productRepository: ProductRepository,
+    private val categoryRepository: CategoryRepository,
+    private val vendorRepository: VendorRepository,
+) {
+
+    @Transactional(readOnly = true)
+    fun getProducts(categoryId: Long?, keyword: String?, pageable: Pageable): PageResponse<ProductSummaryResponse> {
+        val products = productRepository.search(categoryId, keyword, pageable)
+        val vendorNameMap = findVendorNameMap(products.content)
+
+        return PageResponse.of(
+            products.map {
+                ProductSummaryResponse(
+                    id = it.id,
+                    name = it.name,
+                    price = it.price,
+                    imageUrl = it.imageUrl,
+                    stockCount = it.stockCount,
+                    categoryId = it.categoryId,
+                    vendorName = vendorNameMap[it.vendorId],
+                )
+            }
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getProduct(productId: Long): ProductDetailResponse {
+        val product = productRepository.findByIdOrNull(productId)
+            ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_PRODUCT)
+
+        val categoryName = product.categoryId?.let { categoryRepository.findByIdOrNull(it)?.name }
+        val vendorName = product.vendorId?.let { vendorRepository.findByIdOrNull(it)?.name }
+
+        return ProductDetailResponse(
+            id = product.id,
+            name = product.name,
+            price = product.price,
+            description = product.description,
+            imageUrl = product.imageUrl,
+            stockCount = product.stockCount,
+            categoryId = product.categoryId,
+            categoryName = categoryName,
+            vendorId = product.vendorId,
+            vendorName = vendorName,
+        )
+    }
+
+    private fun findVendorNameMap(products: List<Product>): Map<Long, String> {
+        val vendorIds = products.mapNotNull { it.vendorId }.distinct()
+        if (CollectionUtils.isEmpty(vendorIds)) {
+            return emptyMap()
+        }
+        return vendorRepository.findAllById(vendorIds).associateBy({ it.id }, { it.name })
+    }
+}

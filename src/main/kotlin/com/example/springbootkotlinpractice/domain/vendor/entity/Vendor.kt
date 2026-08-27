@@ -31,4 +31,18 @@ class Vendor(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     val id: Long = 0L
+
+    companion object {
+        fun of(
+            name: String,
+            businessRegistrationNumber: String? = null,
+            contactNumber: String? = null,
+        ): Vendor {
+            return Vendor(
+                name = name,
+                businessRegistrationNumber = businessRegistrationNumber,
+                contactNumber = contactNumber,
+            )
+        }
+    }
 }

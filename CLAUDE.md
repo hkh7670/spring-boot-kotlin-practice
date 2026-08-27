@@ -47,8 +47,9 @@ domain/
     service/       OrderService, OrderCancelService(+RecordService), OrderReturnService(+RecordService),
                     OrderShippingService
   payment/         Toss 결제 승인/취소
-  product/         상품 (엔티티/레포지토리만)
-  delivery/        배송 옵션 (엔티티/레포지토리만)
+  product/         상품 목록(카테고리·검색·페이징)/상세 조회 API (QueryDSL, ProductRepositoryImpl)
+  category/        카테고리(대/중/소분류) 목록 조회 API
+  delivery/        배송 옵션 목록 조회 API
 enums/             ResponseCodeEnum, OrderStatus, PaymentStatus, JoinProvider, Role, TokenType
 exception/         ApiErrorException, ApiCommonAdvice
 ```
@@ -81,6 +82,13 @@ exception/         ApiErrorException, ApiCommonAdvice
   `JwtAuthenticationFilter`는 ACCESS_TOKEN일 때만 인증 컨텍스트를 채운다.
 - Refresh Token Rotation: Redis에 최신 토큰만 유지(회원당 세션 1개), 재사용 감지 시 강제 로그아웃(401).
 - JWT 서명키는 `secret`을 UTF-8 바이트 그대로 사용 (AES 쪽 `AesCryptoUtil`은 base64 디코딩 — 혼동 주의).
+- `app.oauth.frontend-success-redirect-uri`/`frontend-failure-redirect-uri`(`OAuth2LoginSuccessHandler`/
+  `OAuth2LoginFailureHandler`가 최종 리다이렉트할 프론트 URL) 기본값은 구 테스트 프론트 포트인
+  `http://localhost:3000/oauth/complete`·`/oauth/error`로 고정돼 있다. `e-commerce-frontend`(기본 포트
+  5173)로 로컬에서 OAuth 로그인을 테스트하려면 `.env`에 `OAUTH_FRONTEND_SUCCESS_REDIRECT_URI`/
+  `OAUTH_FRONTEND_FAILURE_REDIRECT_URI`를 `http://localhost:5173/oauth/complete`·`/oauth/error`로
+  오버라이드해야 한다 — 안 하면 로그인 성공 후 브라우저가 아무것도 안 뜬 3000번 포트로 리다이렉트되어
+  "화면이 안 나온다."
 
 ## 주문 상태 머신 (`OrderStatus`)
 
@@ -120,6 +128,18 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
   별도 빈 필수 — self-invocation은 `@Transactional` 무시됨)를 분리. `cancelOrderAndRestoreStock()`은
   결제실패 취소/만료주문 배치취소 공용.
 
+## 상품/카테고리/배송옵션 조회 API (읽기 전용)
+
+`e-commerce-frontend`(쿠팡 스타일 쇼핑몰) 상품 카탈로그용으로 추가된 공개 API. 전부 `SecurityConfig`의
+`PERMIT_ALL_PATHS`에 등록되어 인증 불필요.
+
+- `GET /api/v1/products` (카테고리/검색어/페이징), `GET /api/v1/products/{id}`,
+  `GET /api/v1/categories`, `GET /api/v1/delivery-options`.
+- `ProductRepositoryImpl.search()`(QueryDSL): count 쿼리를 먼저 실행해 0건이면 content 쿼리 자체를
+  스킵 — 카테고리/검색어 결과가 없는 흔한 케이스에서 불필요한 쿼리 한 번을 아낀다.
+- `ProductService.getProducts()`: 상품 목록에 표시할 `vendorName`을 상품별로 조회하지 않고
+  `vendorRepository.findAllById()`로 배치 조회 후 `Map`으로 매칭 (N+1 방지, 쿼리 2번 고정).
+
 ## Kafka (`domain/order/event`)
 
 `order.paid`/`order.cancelled` 토픽에 발행 (`.env`의 `KAFKA_BOOTSTRAP_SERVERS`).
@@ -141,6 +161,13 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 (단, 앞부분 `CREATE TABLE`도 최종 컬럼까지 반영). 엔티티 변경 시 `ddl.sql`도 항상 같이 갱신할 것 —
 `local`/`dev`는 `ddl-auto: none`이라 자동 반영 안 됨.
 
+로컬/데모용 상품 데이터는 프로젝트 루트 `seed-data.sql`로 별도 관리 (H2 콘솔 또는 MySQL 클라이언트에서
+직접 실행). `ddl.sql`과 동일하게 "새 DB 최초 구축" 전제 — 멱등성 없어 재실행 시 중복 insert됨. 원래
+`CommandLineRunner`(`LocalDataSeeder`)로 앱 기동 시 자동 시딩했었는데, 앱 코드에 데모 데이터를 심는
+것보다 `ddl.sql`과 같은 방식(사람이 직접 실행하는 SQL)이 일관돼서 SQL 스크립트로 교체함.
+`created_datetime`/`updated_datetime`은 `BaseTimeEntity`(JPA Auditing)가 채우는 컬럼이라 DB 기본값이
+없어 `seed-data.sql`에서 직접 `NOW()`로 채워야 한다.
+
 ## 테스트
 
 - `*ControllerTest.kt`: `MockMvc` + 실제 H2 통합 테스트. 외부 API(`TossPaymentsApi`, OAuth 클라이언트)와
@@ -149,7 +176,8 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
   `TransactionRequiredException` → `product.stockCount` 직접 감소+save 헬퍼(`createPaidOrder`) 사용.
 - **테스트 공백** (향후 보강 필요, 요청 전엔 먼저 손대지 않기): `AuthService` reissue/rotation,
   `AuthEmailController` login/signup, `OrderShippingService`/`OrderReturnService` 전체(구현만 하고
-  비용 문제로 테스트 미작성).
+  비용 문제로 테스트 미작성), `ProductController`/`CategoryController`/`DeliveryOptionController`(신규
+  조회 API) — 전부 구현만 하고 테스트 미작성.
 
 ## 배포
 
@@ -162,6 +190,9 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 
 ## 관련 프로젝트 / 문서
 
+- `/Users/kyu/workspace/e-commerce-frontend`: 쿠팡 스타일 쇼핑몰 메인 프론트엔드(React+Vite+TS). 홈/상품
+  목록·검색/상품상세/장바구니/주문·결제(Toss)/주문내역·취소·반품/로그인(이메일+OAuth) 전체 구현. 백엔드
+  API 변경 시 같이 갱신 필요. 자체 CLAUDE.md 참고.
 - `/Users/kyu/workspace/backend-test-client`: 수동 테스트용 Vite+React+TS 프론트엔드(OAuth 로그인,
   주문, Toss 결제 테스트). 백엔드 API 변경 시 필요하면 같이 갱신.
 - `docs/oauth-pkce-login.md`: OAuth PKCE 흐름 (API 베이스 경로는 구버전, 위 인증 섹션 참고).
