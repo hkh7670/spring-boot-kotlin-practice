@@ -83,12 +83,11 @@ exception/         ApiErrorException, ApiCommonAdvice
 - Refresh Token Rotation: Redis에 최신 토큰만 유지(회원당 세션 1개), 재사용 감지 시 강제 로그아웃(401).
 - JWT 서명키는 `secret`을 UTF-8 바이트 그대로 사용 (AES 쪽 `AesCryptoUtil`은 base64 디코딩 — 혼동 주의).
 - `app.oauth.frontend-success-redirect-uri`/`frontend-failure-redirect-uri`(`OAuth2LoginSuccessHandler`/
-  `OAuth2LoginFailureHandler`가 최종 리다이렉트할 프론트 URL) 기본값은 구 테스트 프론트 포트인
-  `http://localhost:3000/oauth/complete`·`/oauth/error`로 고정돼 있다. `e-commerce-frontend`(기본 포트
-  5173)로 로컬에서 OAuth 로그인을 테스트하려면 `.env`에 `OAUTH_FRONTEND_SUCCESS_REDIRECT_URI`/
-  `OAUTH_FRONTEND_FAILURE_REDIRECT_URI`를 `http://localhost:5173/oauth/complete`·`/oauth/error`로
-  오버라이드해야 한다 — 안 하면 로그인 성공 후 브라우저가 아무것도 안 뜬 3000번 포트로 리다이렉트되어
-  "화면이 안 나온다."
+  `OAuth2LoginFailureHandler`가 최종 리다이렉트할 프론트 URL) 기본값은 `http://localhost:3000/oauth/complete`·
+  `/oauth/error`. `e-commerce-frontend`/`backend-test-client` 둘 다 dev 서버 기본 포트가 3000이라 이
+  기본값 그대로 맞는다. 다른 포트로 프론트를 띄운다면 `.env`의 `OAUTH_FRONTEND_SUCCESS_REDIRECT_URI`/
+  `OAUTH_FRONTEND_FAILURE_REDIRECT_URI`를 해당 포트로 오버라이드해야 한다 — 안 하면 로그인 성공/실패 후
+  브라우저가 엉뚱한 포트로 리다이렉트되어 "화면이 안 나온다."
 
 ## 주문 상태 머신 (`OrderStatus`)
 
