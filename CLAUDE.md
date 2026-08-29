@@ -1,7 +1,7 @@
 # spring-boot-kotlin-practice
 
-Kotlin + Spring Boot 3 학습/실습용 프로젝트. OAuth 로그인, JWT 인증, 주문/결제(Toss Payments), Kafka
-이벤트 발행을 직접 구현하며 Spring 생태계를 익히는 것이 목적이다.
+Kotlin + Spring Boot 3 학습/실습 프로젝트. OAuth 로그인, JWT 인증, 주문/결제(Toss Payments), Kafka
+이벤트 발행을 직접 구현하며 Spring 생태계를 익히는 것이 목적.
 
 ## 기술 스택
 
@@ -15,8 +15,8 @@ Kotlin + Spring Boot 3 학습/실습용 프로젝트. OAuth 로그인, JWT 인�
 
 ## 빌드 / 실행
 
-**Gradle 명령은 항상 `mise exec --`를 앞에 붙인다** (`mise.toml`이 `java = temurin-21` 고정, 안 붙이면
-앰비언트 JDK와 버전이 어긋나 `kotlin("plugin.spring")`이 크래시한다).
+**Gradle 명령엔 항상 `mise exec --`를 붙인다** — `mise.toml`이 `java = temurin-21` 고정, 안 붙이면
+앰비언트 JDK와 버전이 어긋나 `kotlin("plugin.spring")`이 크래시.
 
 ```bash
 mise exec -- ./gradlew compileKotlin compileTestKotlin
@@ -24,9 +24,9 @@ mise exec -- ./gradlew test
 mise exec -- ./gradlew bootRun --args='--spring.profiles.active=local'
 ```
 
-프로파일: `local`/`dev`/`mysql`은 외부 MySQL + `ddl-auto: none`(스키마 변경 시 `ddl.sql`을 사람이
-직접 실행). `h2`/`test`는 H2 + `create-drop`(자동 스키마, 배포 DB 반영 확인 수단 아님). 민감정보는
-gitignore된 `.env`.
+- `local`/`dev`/`mysql`: 외부 MySQL + `ddl-auto: none`(스키마 변경 시 `ddl.sql`을 사람이 직접 실행)
+- `h2`/`test`: H2 + `create-drop`(자동 스키마, 배포 DB 반영 확인 수단 아님)
+- 민감정보는 gitignore된 `.env`
 
 ## 포맷팅
 
@@ -55,71 +55,69 @@ enums/             ResponseCodeEnum, OrderStatus, PaymentStatus, JoinProvider, R
 exception/         ApiErrorException, ApiCommonAdvice
 ```
 
-각 도메인은 `api/dto/entity/repository/service` 구조. Controller → Service → Repository 레이어 엄격
-준수, Entity를 API 응답에 직접 노출하지 않음(DTO 변환).
+각 도메인 `api/dto/entity/repository/service` 구조. Controller → Service → Repository 엄격 준수,
+Entity를 API 응답에 직접 노출 안 함(DTO 변환).
 
 ## 공통 컨벤션
 
-- 엔티티 생성은 companion object의 `of()`/`ofOAuth()` 팩토리로만 (public 생성자 직접 호출 금지).
-- 에러는 `ApiErrorException(ResponseCodeEnum.XXX)`로 던진다 (`check()`/`require()` 대신).
-- PII(이름/전화번호/이메일)는 `@Convert(Aes256Converter)`로 결정적 암호화(고정 IV, `WHERE` 동등조회용
-  — 취약점 아니라 의도된 트레이드오프, 랜덤 IV로 바꾸지 말 것). 비밀번호는 BCrypt.
-- 모든 엔티티는 `BaseTimeEntity` 상속.
-- FK 컬럼/필드명은 `참조테이블명(단수) + _id`.
-- Spring Data 파생 쿼리 메서드명은 **DB 컬럼명이 아니라 Kotlin 프로퍼티 경로**와 일치해야 한다 (틀리면
-  `PropertyReferenceException`으로 컨텍스트 기동 자체가 실패, `@SpringBootTest` 전체 도미노 실패).
-- null/empty 체크는 `CollectionUtils.isEmpty()`/`StringUtils.hasText()`, `!!` 금지.
-- 상태값(`Order.status`, `Payment.status`)은 컴파일타임 강제(`private set`)가 아니라 평범한 public
-  `var`다 — Kotlin 주 생성자 프로퍼티는 커스텀 접근자를 문법적으로 붙일 수 없기 때문. 대신 항상 이름
-  있는 메서드(`markPaid()`, `markShipping()`, `cancel()`, `done()` 등)로만 변경하는 컨벤션으로 대체.
-  단, 외부 API(Toss) 성공 후 반영되는 동시성 민감한 전이(결제확정/주문취소/반품완료)는 이 엔티티
-  메서드 대신 `OrderRepository.updateStatusIfCurrent()` 원자적 조건부 UPDATE를 쓴다 — 아래 "주문취소/
-  반품" 섹션 참고.
+- 엔티티 생성: companion object `of()`/`ofOAuth()` 팩토리만 (public 생성자 직접 호출 금지)
+- 에러: `ApiErrorException(ResponseCodeEnum.XXX)`로 던짐 (`check()`/`require()` 금지)
+- PII(이름/전화번호/이메일): `@Convert(Aes256Converter)`로 결정적 암호화(고정 IV, `WHERE` 동등조회용
+  — 취약점 아니라 의도된 트레이드오프, 랜덤 IV로 바꾸지 말 것). 비밀번호는 BCrypt
+- 모든 엔티티: `BaseTimeEntity` 상속
+- FK 컬럼/필드명: `참조테이블명(단수) + _id`
+- Spring Data 파생 쿼리 메서드명: **DB 컬럼명이 아니라 Kotlin 프로퍼티 경로**와 일치 필수 (틀리면
+  `PropertyReferenceException`으로 컨텍스트 기동 자체가 실패 → `@SpringBootTest` 전체 도미노 실패)
+- null/empty 체크: `CollectionUtils.isEmpty()`/`StringUtils.hasText()` 사용, `!!` 금지
+- 상태값(`Order.status`, `Payment.status`): 평범한 public `var`(Kotlin 주 생성자 프로퍼티는 커스텀
+  접근자를 문법적으로 못 붙임) — 대신 항상 이름 있는 메서드(`markPaid()`, `markShipping()`, `cancel()`
+  등)로만 변경. 단, 외부 API(Toss) 성공 후 반영되는 동시성 민감 전이(결제확정/주문취소/반품완료)는
+  `OrderRepository.updateStatusIfCurrent()` 원자적 조건부 UPDATE 사용 — 아래 "주문취소/반품" 참고
 
 ## 인증/인가 (`domain/auth`, `common/security`)
 
 - 가입 경로 2가지: EMAIL(BCrypt) / OAuth(GOOGLE·KAKAO·NAVER, PKCE 통일 — Kakao/Naver는 서버 보관
-  `client_secret`으로 대체). 유니크 제약이 `(provider_id, join_provider)`+`(email, join_provider)`라
-  같은 이메일을 OAuth/EMAIL 각각 가입 가능.
-- 실제 OAuth API 경로는 `/api/v1/auth/oauth` (`docs/oauth-pkce-login.md`는 구 경로로 미반영 상태).
-- 토큰 4종(`TokenType`): ACCESS(30분)/REFRESH(14일)/TEMP(10분, OAuth 신규가입 중간단계)/
-  TOTP_PENDING(10분, EMAIL 로그인 2단계 인증 중간단계). `JwtAuthenticationFilter`는 ACCESS_TOKEN일
-  때만 인증 컨텍스트를 채운다.
-- Refresh Token Rotation: Redis에 최신 토큰만 유지(회원당 세션 1개), 재사용 감지 시 강제 로그아웃(401).
-- JWT 서명키는 `secret`을 UTF-8 바이트 그대로 사용 (AES 쪽 `AesCryptoUtil`은 base64 디코딩 — 혼동 주의).
-- `app.oauth.frontend-success-redirect-uri`/`frontend-failure-redirect-uri`(`OAuth2LoginSuccessHandler`/
-  `OAuth2LoginFailureHandler`가 최종 리다이렉트할 프론트 URL) 기본값은 `http://localhost:3000/oauth/complete`·
-  `/oauth/error`. `e-commerce-frontend`/`backend-test-client` 둘 다 dev 서버 기본 포트가 3000이라 이
-  기본값 그대로 맞는다. 다른 포트로 프론트를 띄운다면 `.env`의 `OAUTH_FRONTEND_SUCCESS_REDIRECT_URI`/
-  `OAUTH_FRONTEND_FAILURE_REDIRECT_URI`를 해당 포트로 오버라이드해야 한다 — 안 하면 로그인 성공/실패 후
-  브라우저가 엉뚱한 포트로 리다이렉트되어 "화면이 안 나온다."
+  `client_secret`으로 대체). 유니크 제약 `(provider_id, join_provider)` + `(email, join_provider)` →
+  같은 이메일로 OAuth/EMAIL 각각 가입 가능
+- OAuth API 경로: `/api/v1/auth/oauth`
+- OAuth 로그인 흐름 (`oauth2Login` + 1회용 relay code):
+  - 프론트는 전체 페이지 이동으로 `/oauth2/authorization/{provider}` 진입(fetch 아님, CORS 영향 없음)
+  - `redirect_uri`는 항상 백엔드 도메인 — Provider는 프론트 도메인을 모름
+  - 콜백 처리 후 `OAuth2LoginSuccessHandler`가 로그인 결과(JWT 또는 tempToken)를
+    `OAuthRelayCodeService`로 Redis에 UUID 키·60초 TTL로 저장, 그 UUID만 리다이렉트 URL에 실음 —
+    **JWT가 URL에 노출되는 일 없음**
+  - 프론트(`/oauth/complete?code=...`)가 `POST /api/v1/auth/oauth/exchange`로 1회 소비(조회 즉시
+    Redis에서 삭제)
+  - 로그인 왕복 구간에서만 세션 쿠키 사용, 이후 API 인증은 완전 stateless JWT
+- 토큰 4종(`TokenType`): ACCESS(30분) / REFRESH(14일) / TEMP(10분, OAuth 신규가입 중간단계) /
+  TOTP_PENDING(10분, EMAIL 로그인 2단계 인증 중간단계). `JwtAuthenticationFilter`는 ACCESS_TOKEN만
+  인증 컨텍스트를 채움
+- Refresh Token Rotation: Redis에 최신 토큰만 유지(회원당 세션 1개), 재사용 감지 시 강제 로그아웃(401)
+- JWT 서명키는 `secret`을 UTF-8 바이트 그대로 사용 (AES `AesCryptoUtil`은 base64 디코딩 — 혼동 주의)
+- `app.oauth.frontend-success/failure-redirect-uri` 기본값 `localhost:3000/oauth/complete`·
+  `/oauth/error` — 프론트가 3000 아닌 포트면 `.env`의 `OAUTH_FRONTEND_*_REDIRECT_URI`를 오버라이드
+  필요(안 하면 로그인 성공/실패 후 엉뚱한 포트로 리다이렉트되어 "화면이 안 나온다")
 
 ### TOTP(OTP 앱) 2단계 인증 — EMAIL 로그인 전용, 선택 기능
 
-이메일 인증코드 방식과 비교 검토 후 TOTP(RFC 6238, `dev.samstevens.totp`)로 결정 — 이 프로젝트엔
-메일 발송 인프라가 전혀 없어(SMTP/메일 API 전무) 이메일 코드 방식은 처음부터 그걸 구축해야 하는
-반면 TOTP는 라이브러리 하나로 끝남. 강제 아님, 회원이 계정 설정에서 켜고 끄는 선택 기능
-(`Member.totpEnabled`).
+이메일 인증코드 대신 TOTP(RFC 6238, `dev.samstevens.totp`) 채택 — 메일 발송 인프라가 전무해 이메일
+코드 방식은 처음부터 구축해야 하는 반면 TOTP는 라이브러리 하나로 끝남. 강제 아님,
+`Member.totpEnabled`로 회원이 계정 설정에서 on/off.
 
-- `AuthService.login()`이 OAuth의 `oauthLogin()`(LOGIN/NEED_SIGN_UP)과 동일한 상태분기 모양으로
-  바뀜 — `EmailLoginResponse.status`가 `LOGIN`(TOTP 미사용, 즉시 access/refresh 발급)과
-  `NEED_TOTP`(TOTP 사용, `totpPendingToken`만 발급) 중 하나. 최종 토큰은
-  `POST /api/v1/auth/totp/login`(`AuthService.totpLogin()`)에서 발급.
-  **Breaking change**: `/api/v1/auth/email/login` 응답이 기존 `AuthTokenResponse`
-  (`{grantType, accessToken, refreshToken}`)에서 `EmailLoginResponse`
-  (`{status, totpPendingToken?, accessToken?, refreshToken?}`)로 바뀜 — TOTP 미사용 회원도 예외
-  없이 새 포맷을 받는다.
-- 등록/해제는 `TotpController`(`/api/v1/auth/totp/enroll`, `/enroll/confirm`, `/disable`, 모두 인증
-  필요) → `TotpService` 담당. 등록 확정 전 시크릿은 `Member`에 바로 쓰지 않고 Redis에
-  `totp-enroll:{memberId}` 키로 5분 TTL만 두었다가, 첫 코드 검증 성공 시에만
-  `Member.enableTotp()`로 영구 저장한다 — 잘못된 등록 도중 이탈로 계정이 잠기는 것 방지.
-- `Member.totpSecret`은 PII 필드들과 동일한 `Aes256Converter`(고정 IV)로 암호화 저장 — 동등조회가
-  필요 없는 시크릿에는 원래 랜덤 IV가 더 적합하지만, 기존 컨버터 재사용을 우선한 의도적 트레이드오프.
-- 로그인 중간 단계는 OAuth 신규가입의 `TEMP_TOKEN` 패턴과 동일하되, 클레임 모양이 달라
-  (`TempTokenClaims`는 `providerId`/`provider`/`email`/`nickname`, TOTP pending은 `{id, tokenType}`뿐)
-  혼용 위험을 피하려 별도 `TokenType.TOTP_PENDING_TOKEN`으로 분리했다(같은 `TEMP_TOKEN` 타입 태그
-  아래 서로 다른 클레임 모양을 섞지 않음). 클레임이 REFRESH_TOKEN과 동일해 `JwtTokenClaims.of(id,
-  tokenType)`를 그대로 재사용, 유효기간도 기존 `jwtProperties.tempTokenValidityMs`를 재사용.
+- `AuthService.login()`: OAuth의 LOGIN/NEED_SIGN_UP과 동일한 상태분기 — `EmailLoginResponse.status`가
+  `LOGIN`(TOTP 미사용, 즉시 access/refresh 발급) / `NEED_TOTP`(TOTP 사용, `totpPendingToken`만 발급,
+  최종 토큰은 `POST /api/v1/auth/totp/login`). **Breaking change**: `/api/v1/auth/email/login` 응답이
+  `AuthTokenResponse`(`{grantType, accessToken, refreshToken}`)에서 `EmailLoginResponse`
+  (`{status, totpPendingToken?, accessToken?, refreshToken?}`)로 변경 — TOTP 미사용 회원도 새 포맷 적용
+- 등록/해제: `TotpController`(`/enroll`, `/enroll/confirm`, `/disable`, 모두 인증 필요) → `TotpService`.
+  확정 전 시크릿은 `Member`에 바로 안 쓰고 Redis에만(`totp-enroll:{memberId}`, 5분 TTL), 첫 코드 검증
+  성공 시에만 `Member.enableTotp()`로 영구 저장 — 잘못된 등록 도중 이탈로 계정이 잠기는 것 방지
+- `Member.totpSecret`은 PII 필드와 동일한 `Aes256Converter`(고정 IV)로 암호화 저장 — 동등조회가 필요
+  없는 시크릿엔 원래 랜덤 IV가 더 적합하나, 기존 컨버터 재사용을 우선한 의도적 트레이드오프
+- 로그인 중간 토큰은 OAuth `TEMP_TOKEN`과 클레임 모양이 달라(`TempTokenClaims`는
+  `providerId`/`provider`/`email`/`nickname`, TOTP pending은 `{id, tokenType}`뿐) 혼용 위험을 피하려
+  별도 `TokenType.TOTP_PENDING_TOKEN`으로 분리. 클레임은 REFRESH_TOKEN과 동일해 `JwtTokenClaims.of(id,
+  tokenType)` 재사용, 유효기간도 기존 `jwtProperties.tempTokenValidityMs` 재사용
 
 ## 주문 상태 머신 (`OrderStatus`)
 
@@ -129,194 +127,173 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
    CANCELLED    CANCELLED
 ```
 
-`CANCELLED`는 `PENDING_PAYMENT`/`PAID`에서만 가능 — 배송 시작(`SHIPPING` 이상) 후에는 결제취소 불가
-(`ORDER_ALREADY_SHIPPING`), 배송완료 후 환불은 반품 절차(`RETURNING`→`RETURNED`)로만. 단순 전이(배송
-시작/완료, 반품요청)는 `Order` 엔티티의 이름 있는 메서드가 허용 안 되는 현재 상태를 예외로 막고,
-외부 API(Toss) 성공 후 반영되는 전이(결제확정/취소/반품완료)는 `OrderRepository.updateStatusIfCurrent()`
-원자적 조건부 UPDATE가 막는다 (아래 "동시 중복 요청 방어" 참고).
+- `CANCELLED`: `PENDING_PAYMENT`/`PAID`에서만 가능 — 배송 시작(`SHIPPING` 이상) 후엔 결제취소 불가
+  (`ORDER_ALREADY_SHIPPING`), 배송완료 후 환불은 반품 절차(`RETURNING`→`RETURNED`)로만
+- 단순 전이(배송 시작/완료, 반품요청): `Order` 엔티티 이름 있는 메서드가 허용 안 되는 상태를 예외로 차단
+- 외부 API(Toss) 성공 후 반영되는 전이(결제확정/취소/반품완료): `OrderRepository.updateStatusIfCurrent()`
+  원자적 조건부 UPDATE가 차단 — 아래 "동시 중복 요청 방어" 참고
 
 ## 주문취소/반품 — Toss 호출 먼저, DB는 성공 후에
 
-`OrderCancelService.cancelOrder()`(사용자, PAID→CANCELLED)와 `OrderReturnService.completeReturn()`
-(관리자, RETURNING→RETURNED) 둘 다 **Toss 취소 API 성공 후에만 DB 반영**한다 — 재고복구를 먼저
-해버리면 그 사이 다른 주문이 그 재고를 선점해, Toss 실패 시 되돌릴 재고가 없어지는 문제 때문에
-(DB-first + 보정 방식을 검토 후 기각). `PaymentService.confirmPayment()`(결제승인)도 동일 순서.
+`OrderCancelService.cancelOrder()`(PAID→CANCELLED), `OrderReturnService.completeReturn()`
+(RETURNING→RETURNED), `PaymentService.confirmPayment()`(결제승인) 모두 **Toss API 성공 후에만 DB
+반영** — 재고복구를 먼저 하면 그 사이 다른 주문이 선점해, Toss 실패 시 되돌릴 재고가 없어짐
+(DB-first + 보정 방식은 검토 후 기각).
 
-- `common/payment/toss/TossPaymentCanceller`: Toss 취소 호출 + 에러처리(`PAYMENT_CANCEL_FAILED`)를
-  모은 공용 컴포넌트. 새 취소성 플로우 추가 시 반드시 이걸 재사용.
-- 각 흐름은 "검증+외부호출" 서비스와 "DB 기록 전용" 서비스로 분리 (Toss 성공 후에만 record 서비스
-  호출 → 보정 로직 불필요): `OrderCancelService`→`OrderCancelRecordService`,
-  `OrderReturnService.completeReturn()`→`OrderReturnRecordService`. `requestReturn()`(사용자,
-  DELIVERED→RETURNING)과 `OrderShippingService`는 외부호출이 없어 각각 단일 `@Transactional`.
-- Payment 조회보다 **상태 검증을 먼저** 해야 한다 — 안 그러면 `PENDING_PAYMENT`(Payment 미존재) 취소
-  시도가 `NOT_FOUND_ORDER`로 잘못 응답한다 (`ORDER_NOT_PAID`가 맞음).
+- `common/payment/toss/TossPaymentCanceller`: Toss 취소 호출 + 에러처리(`PAYMENT_CANCEL_FAILED`) 공용
+  컴포넌트 — 새 취소성 플로우는 반드시 이걸 재사용
+- 흐름 분리: "검증+외부호출" 서비스 / "DB 기록 전용" 서비스 — `OrderCancelService`→
+  `OrderCancelRecordService`, `OrderReturnService.completeReturn()`→`OrderReturnRecordService`
+  (Toss 성공 후에만 record 서비스 호출 → 보정 로직 불필요). `requestReturn()`(DELIVERED→RETURNING)과
+  `OrderShippingService`는 외부호출 없어 각각 단일 `@Transactional`
+- Payment 조회보다 **상태 검증을 먼저** — 안 그러면 `PENDING_PAYMENT`(Payment 미존재) 취소 시도가
+  `NOT_FOUND_ORDER`로 오응답(`ORDER_NOT_PAID`가 맞음)
 - **동시 중복 요청 방어**: `PaymentRecordService`/`OrderCancelRecordService`/`OrderReturnRecordService`
-  셋 다 주문 상태 전이를 `order.markPaid()`/`markCancelled()` 같은 엔티티 메서드가 아니라
-  `OrderRepository.updateStatusIfCurrent(orderId, expectedStatus, newStatus)`(원자적 조건부 UPDATE,
-  `decreaseStock()`과 동일 패턴)로 한다 — 영향받은 row가 0이면 이미 다른 동시 요청이 처리했다는
-  뜻이므로 재고복구/이벤트발행 등 후속 부수효과를 건너뛴다. 실제로 프론트(`OrderCompletePage.tsx`)가
-  React StrictMode 이중 마운트로 결제확정을 밀리초 단위로 두 번 호출해, 엔티티 메서드의 in-memory
-  상태체크 방식(두 트랜잭션이 같은 상태를 동시에 읽어버림)이 재고를 두 배로 복구하는 사고가 있었다
-  (프론트는 `useRef` 가드로 이미 수정, 백엔드는 방어적으로 원자적 UPDATE로 전환). 비관적 락
-  (`SELECT ... FOR UPDATE`)은 Toss 외부호출과 얽혀 락 경합/데드락 위험이 있어 채택하지 않음.
-  `Order.markCancelled()`/`cancelPaidOrder()`/`completeReturn()` 엔티티 메서드는 이 전환으로 전부
-  삭제됨(정상 흐름에서는 각 Service 계층의 사전 상태검증이 이미 걸러주므로 손실 없음) —
-  `markPaid()`/`markShipping()`/`markDelivered()`/`requestReturn()`은 동시 중복 위험이 없는 단순
-  전이라 그대로 유지.
+  모두 상태 전이를 엔티티 메서드가 아니라 `OrderRepository.updateStatusIfCurrent(orderId,
+  expectedStatus, newStatus)`(원자적 조건부 UPDATE, `decreaseStock()`과 동일 패턴)로 처리 — 영향
+  row가 0이면 이미 다른 동시 요청이 처리한 것이므로 재고복구/이벤트발행 등 후속 부수효과를 스킵
+  - 배경: 프론트(`OrderCompletePage.tsx`)가 React StrictMode 이중 마운트로 결제확정을 밀리초 단위로
+    두 번 호출 → 엔티티 메서드의 in-memory 상태체크(두 트랜잭션이 같은 상태를 동시에 읽음)가 재고를
+    두 배로 복구하는 사고 발생(프론트는 `useRef` 가드로 수정, 백엔드는 방어적으로 원자적 UPDATE 채택)
+  - 비관적 락(`SELECT ... FOR UPDATE`)은 Toss 외부호출과 얽혀 락 경합/데드락 위험 있어 미채택
+  - `Order.markCancelled()`/`cancelPaidOrder()`/`completeReturn()` 엔티티 메서드는 이 전환으로 전부
+    삭제됨(각 Service의 사전 상태검증이 이미 걸러줘 손실 없음). `markPaid()`/`markShipping()`/
+    `markDelivered()`/`requestReturn()`은 동시 중복 위험 없는 단순 전이라 그대로 유지
 
 ## 주문/결제 기타 컨벤션
 
-- 재고 차감/복구는 조건부 UPDATE(`decreaseStock`/`increaseStock`)로 원자적 처리, 초과판매 방지.
+- 재고 차감/복구: 조건부 UPDATE(`decreaseStock`/`increaseStock`)로 원자적 처리, 초과판매 방지
 - `@Modifying` 벌크 UPDATE(`decreaseStock`/`increaseStock`/`updateStatusIfCurrent`)는 JPA
-  Auditing(`@LastModifiedDate`)이 안 타므로(엔티티 생명주기 콜백을 거치지 않음) `updated_datetime`을
-  쿼리 안에서 `NOW(6)`으로 직접 갱신해야 한다 — 안 그러면 실제로 변경된 row인데도 수정일시가 그대로
-  남는다. `OrderRepository.updateStatusIfCurrent()`는 enum(`OrderStatus`) 파라미터를 네이티브 쿼리에
-  바인딩할 때의 ordinal/string 모호성을 피하려고 `nativeQuery = true` + `.name`(문자열)으로 받는다
-  (JPQL이었다면 `@Enumerated(EnumType.STRING)` 매핑을 그대로 타서 문제없지만, 벌크 UPDATE에 `NOW(6)`을
-  쓰려면 MySQL 네이티브 함수라 JPQL로는 못 쓰고 네이티브 쿼리로 전환해야 했음).
-- 가격은 주문 시점 스냅샷(`OrderItem.price`, `Order.deliveryPrice`) 사용 — 라이브 조회값 재계산 금지.
-- `OrderStatusHistory`가 모든 상태 전이를 append-only로 기록 (FK 제약 의도적으로 없음).
-- `StaleOrderCancelScheduler`가 10분마다 생성 10분 초과 `PENDING_PAYMENT` 주문을 취소+재고복구.
+  Auditing(`@LastModifiedDate`)이 안 타므로(엔티티 생명주기 콜백 미경유) `updated_datetime`을 쿼리
+  안에서 `NOW(6)`으로 직접 갱신해야 함. `NOW(6)`은 MySQL 네이티브 함수라 JPQL 불가 → `nativeQuery =
+  true` 필수, enum은 ordinal/string 바인딩 모호성을 피하려 `.name`(문자열)으로 전달
+- 가격은 주문 시점 스냅샷(`OrderItem.price`, `Order.deliveryPrice`) 사용 — 라이브 조회값 재계산 금지
+- `OrderStatusHistory`가 모든 상태 전이를 append-only로 기록 (FK 제약 의도적으로 없음)
+- `StaleOrderCancelScheduler`가 10분마다 생성 10분 초과 `PENDING_PAYMENT` 주문을 취소+재고복구
 - 결제(Toss) 확정은 외부호출(`PaymentService`, `@Transactional` 없음)과 DB쓰기(`PaymentRecordService`,
   별도 빈 필수 — self-invocation은 `@Transactional` 무시됨)를 분리. `cancelOrderAndRestoreStock()`은
-  결제실패 취소/만료주문 배치취소 공용.
+  결제실패 취소/만료주문 배치취소 공용
 
 ## 상품/카테고리/배송옵션 조회 API (읽기 전용)
 
-`e-commerce-frontend`(쿠팡 스타일 쇼핑몰) 상품 카탈로그용으로 추가된 공개 API. 전부 `SecurityConfig`의
-`PERMIT_ALL_PATHS`에 등록되어 인증 불필요.
+`e-commerce-frontend`(쿠팡 스타일 쇼핑몰) 상품 카탈로그용 공개 API. 전부 `SecurityConfig`의
+`PERMIT_ALL_PATHS`에 등록, 인증 불필요.
 
-- `GET /api/v1/products` (카테고리/검색어/페이징), `GET /api/v1/products/{id}`,
-  `GET /api/v1/categories`, `GET /api/v1/delivery-options`.
+- `GET /api/v1/products`(카테고리/검색어/페이징), `GET /api/v1/products/{id}`,
+  `GET /api/v1/categories`, `GET /api/v1/delivery-options`
 - `ProductRepositoryImpl.search()`(QueryDSL): count 쿼리를 먼저 실행해 0건이면 content 쿼리 자체를
-  스킵 — 카테고리/검색어 결과가 없는 흔한 케이스에서 불필요한 쿼리 한 번을 아낀다.
-- `ProductService.getProducts()`: 상품 목록에 표시할 `vendorName`을 상품별로 조회하지 않고
-  `vendorRepository.findAllById()`로 배치 조회 후 `Map`으로 매칭 (N+1 방지, 쿼리 2번 고정).
-- `OrderService.getOrders()`(주문 목록, 사용자 인증 필요): 마찬가지로 `OrderItemRepository.findByOrderIdIn()`
-  배치조회로 대표 상품명 + 건수만 요약해 반환.
+  스킵 — 카테고리/검색어 결과가 없는 흔한 케이스에서 불필요한 쿼리 한 번을 아낌
+- `ProductService.getProducts()`: `vendorName`을 상품별로 조회하지 않고
+  `vendorRepository.findAllById()`로 배치 조회 후 `Map`으로 매칭 (N+1 방지, 쿼리 2번 고정)
+- `OrderService.getOrders()`(주문 목록): 마찬가지로 `OrderItemRepository.findByOrderIdIn()` 배치조회로
+  대표 상품명 + 건수만 요약해 반환
+
+**알려진 이슈**: `categories`는 대/중/소분류 계층 구조인데, `products.category_id`와 `ddl.sql` 컬럼
+주석("소분류")은 마치 리프(소분류) 전용인 것처럼 문서화돼 있음 — 실제 DB 레벨 강제는 없어 대/중/소
+어느 레벨이든 저장 가능. leaf 강제가 필요한지, 문서 표현만 고칠지 미정.
 
 ## 상품 옵션(`ProductOption`) — 가격/재고 둘 다 옵션 단위로만 관리
 
-상품구매 시 옵션(사이즈/색상 등)을 지정할 수 있도록, `products` 하위에 `product_options`
-테이블(1:N)을 추가하고 **가격과 재고 둘 다** 옵션 레벨로 이전했다. **모든 `Product`는 최소
-1개의 `ProductOption`을 가진다** — 옵션이 실제로 없는 단순 상품도 "기본" 옵션 1개로 취급
-(하이브리드 아님, 조회/차감 경로가 항상 하나로 통일됨). `products.stock_count`/`price` 컬럼은
-완전히 제거됨 — `Product`에는 이제 이름/설명/이미지/카테고리/업체 정보만 남는다.
+상품구매 시 옵션(사이즈/색상 등)을 지정할 수 있도록 `products` 하위에 `product_options`
+테이블(1:N)을 두고 **가격과 재고 둘 다** 옵션 레벨로 이전. **모든 `Product`는 최소 1개의
+`ProductOption`을 가짐** — 옵션이 실제로 없는 단순 상품도 "기본" 옵션 1개로 취급(조회/차감 경로가
+항상 하나로 통일). `products.stock_count`/`price` 컬럼은 완전 제거 — `Product`엔 이름/설명/이미지/
+카테고리/업체 정보만 남음.
 
-- `ProductOption`은 `OrderItem`과 동일하게(이 코드베이스에서 `@ManyToOne`을 쓰는 유이한 두 엔티티)
-  `Product`를 `@ManyToOne(FetchType.LAZY)`로 참조한다 — `Product`/`Category`/`CartItem`처럼 raw
-  `Long` FK를 쓰는 스타일과 의도적으로 다름(부모 엔티티 접근이 빈번해 프록시 재사용 가치가 큼).
-  `Product`에는 `@OneToMany` 컬렉션을 추가하지 않았다(불필요, `ProductOptionRepository.findByProductId()`로 조회).
-- 재고 차감/복구(`decreaseStock`/`increaseStock`, 조건부 원자적 UPDATE)가 `ProductRepository`에서
-  `ProductOptionRepository`로 완전히 이동. `OrderItem.product` 필드도 `OrderItem.productOption`으로
-  교체(FK `order_items.product_option_id`) — 상품 정보는 `orderItem.productOption.product`로 접근.
-  가격도 `productOption.price`가 유일한 소스 — `OrderService.createOrder()`의 총액 계산과
-  `OrderItem.price` 스냅샷 둘 다 여기서만 읽는다.
-- `GET /api/v1/products/{id}` 응답은 스칼라 `price`/`stockCount` 대신 `productOptions: [{id,
-  name, price, stockCount}]` 배열만 반환 (옵션 선택 UI 근거, 옵션마다 가격이 다를 수 있음).
-  목록(`GET /api/v1/products`)의 `price`/`stockCount`는 필드명은 그대로지만 값은
-  `ProductOptionRepository.findAggregatesByProductIdIn()`(옵션별 재고 SUM + 최저가 MIN을 한
-  쿼리로 같이 집계)로 구한 "최저가/총재고" — 옵션을 아직 안 고른 목록 화면에서 실제 쇼핑몰의
-  "OO원부터" 표시와 동일한 패턴.
-- `ProductOptionRepository`에 fetch join 메서드 2개(`findByIdFetchProduct`/`findByIdInFetchProduct`)를
-  둬서 옵션 조회 시 부모 `Product`를 한 번에 가져온다 (주문 생성 시 `productOption.product.name`
-  등 상품 메타정보 접근, 장바구니 조회 양쪽에서 N+1 없이 가능 — 가격 자체는 `Product`가 아니라
-  `productOption.price`에서 바로 나오므로 이 fetch join과 무관).
+- `ProductOption`은 (`OrderItem`과 함께 이 코드베이스에서 유이하게) `Product`를
+  `@ManyToOne(FetchType.LAZY)`로 참조 — `Product`/`Category`/`CartItem`의 raw `Long` FK 스타일과
+  의도적으로 다름(부모 엔티티 접근이 빈번해 프록시 재사용 가치가 큼). `Product`에는 `@OneToMany`
+  컬렉션 미추가(불필요, `ProductOptionRepository.findByProductId()`로 조회)
+- 재고 차감/복구(`decreaseStock`/`increaseStock`)가 `ProductRepository`에서 `ProductOptionRepository`로
+  완전히 이동. `OrderItem.product`도 `OrderItem.productOption`으로 교체(FK
+  `order_items.product_option_id`), 가격도 `productOption.price`가 유일한 소스
+- `GET /api/v1/products/{id}` 응답은 스칼라 `price`/`stockCount` 대신 `productOptions: [{id, name,
+  price, stockCount}]` 배열만 반환. 목록(`GET /api/v1/products`)의 `price`/`stockCount`는 필드명은
+  그대로지만 값은 `findAggregatesByProductIdIn()`(옵션별 재고 SUM + 최저가 MIN을 한 쿼리로 집계)로
+  구한 "최저가/총재고"
+- `ProductOptionRepository`의 `findByIdFetchProduct`/`findByIdInFetchProduct`: fetch join으로 부모
+  `Product`를 한 번에 가져옴(주문 생성·장바구니 조회에서 N+1 없이 상품 메타정보 접근 — 가격 자체는
+  `productOption.price`에서 바로 나오므로 이 fetch join과 무관)
 
 ## 장바구니 API (`domain/cart`)
 
-초기에는 서버 Cart 없이 프론트 zustand + localStorage로만 관리했으나(`OrderCreateRequest`가 아이템
-목록을 직접 받는 구조라 가능했음), 기기 간 동기화와 재고 기반 검증이 필요해져 회원별 서버 저장 방식으로
-전환함.
+초기엔 서버 Cart 없이 프론트 zustand + localStorage로만 관리했으나(`OrderCreateRequest`가 아이템
+목록을 직접 받는 구조라 가능) 기기 간 동기화·재고 기반 검증이 필요해져 회원별 서버 저장으로 전환.
 
-- `cart_items` 테이블: `(member_id, product_option_id)` UNIQUE — `CartItem` 엔티티는 `Product`/`Category`와
-  동일하게 `@ManyToOne` 관계가 아닌 raw `Long` FK(`memberId`, `productOptionId`)를 쓴다(상품 옵션
-  도입 전에는 `productId`였음). 목록 조회 시 `ProductOptionRepository.findByIdInFetchProduct()`로
-  배치 fetch join 해 N+1을 피하는 서비스 레이어 패턴과 짝을 이루기 위함.
-- API: `GET /api/v1/cart`(조회), `POST /api/v1/cart/items`(담기), `PATCH /api/v1/cart/items/{productOptionId}`
-  (수량변경), `DELETE /api/v1/cart/items/{productOptionId}`(삭제) — 넷 다 "상품"이 아니라 "상품 옵션"
-  단위로 동작한다. 인증 필요(`hasRole('USER')`), 담기/수량변경/삭제 액션마다 프론트가 즉시 호출해 DB에
-  반영하는 구조(별도 "저장" 버튼 없음, 네이버/쿠팡과 동일한 방식).
-- **담기=증분, 수량변경=절대값, 삭제=멱등**: `POST`는 이미 담겨 있으면 수량을 더하고(상품상세 "N개 더
-  담기" 시맨틱), `PATCH`는 지정한 값으로 덮어쓴다. `DELETE`는 대상이 이미 없어도 에러 없이 성공 처리한다
-  (멱등한 REST 삭제 시맨틱, 프론트 재시도/레이스에 안전).
-- **에러 처리 정책**: 조회는 담긴 게 없어도 에러 없이 빈 배열을 반환한다. 수량변경(`PATCH`)은 대상이
-  장바구니에 없으면 `NOT_FOUND_CART_ITEM`(1021)을 던진다 — 사용자가 명시적으로 "업데이트 시점엔 에러가
-  필요하다"고 판단해 조회(관대)와 변경(엄격)의 정책을 다르게 가져감.
-- **재고는 검증만, 예약/차감 안 함**: 담기/수량변경 시 `요청 수량 > productOption.stockCount`면
-  `NOT_ENOUGH_STOCK`(1005)으로 막지만, 실제 재고를 차감하지는 않는다 — 차감은 기존 설계 그대로 주문
-  생성 시점(`ProductOptionRepository.decreaseStock()` 원자적 UPDATE)에만 일어난다. 장바구니에 담아둔
-  사이 재고가 줄어드는 레이스는 주문 생성 시 재검증되므로 안전(위 "주문취소/반품 — Toss 호출 먼저"
-  섹션의 설계 철학과 동일).
-- **`soldOut` boolean만 노출, 원본 재고 수량은 응답에 없음**: `CartItemResponse.soldOut = stockCount <= 0`
-  만 내려주고 실제 `stockCount`는 필드 자체가 없다 — 프론트가 재고 수량을 임의로 추측/노출하지 못하게
-  막기 위함(품절 배지 표시 용도로만 쓰라는 의도).
+- `cart_items`: `(member_id, product_option_id)` UNIQUE — `CartItem`은 `Product`/`Category`와
+  동일하게 raw `Long` FK(`memberId`, `productOptionId`) 사용
+- API: `GET /api/v1/cart`(조회), `POST /api/v1/cart/items`(담기),
+  `PATCH /api/v1/cart/items/{productOptionId}`(수량변경), `DELETE .../{productOptionId}`(삭제) —
+  넷 다 "상품 옵션" 단위, 인증 필요, 액션마다 즉시 DB 반영(별도 저장 버튼 없음)
+- **담기=증분, 수량변경=절대값, 삭제=멱등**(대상이 없어도 에러 없이 성공)
+- **에러 처리**: 조회는 관대(담긴 게 없어도 빈 배열). 수량변경(`PATCH`)은 대상이 없으면
+  `NOT_FOUND_CART_ITEM`(1021)
+- **재고는 검증만, 예약/차감 안 함**: 담기/수량변경 시 초과 요청이면 `NOT_ENOUGH_STOCK`(1005)이지만
+  실제 차감은 주문 생성 시점에만(`decreaseStock()` 원자적 UPDATE) — 장바구니에 담긴 사이 재고가 줄어드는
+  레이스는 주문 생성 시 재검증되므로 안전
+- `CartItemResponse`는 `soldOut` boolean만 노출, 실제 `stockCount`는 응답에 없음(품절 배지 용도로만,
+  재고 수량 추측/노출 방지)
 
 ## Kafka (`domain/order/event`)
 
 `order.paid`/`order.cancelled` 토픽에 발행 (`.env`의 `KAFKA_BOOTSTRAP_SERVERS`).
 
 - `@Transactional` 메서드 내부(`PaymentRecordService`)에서는 `ApplicationEventPublisher.publishEvent()`로
-  일반 이벤트만 발행 → `OrderEventRelay`가 `@TransactionalEventListener(AFTER_COMMIT)`로 받아 실제 Kafka
-  발행 (롤백 시 발행 안 됨). 이미 트랜잭션 밖인 코드(`OrderCancelService`)는 `OrderEventPublisher`를 직접 호출.
-- `OrderEventPublisher.send()`는 실패를 절대 상위로 전파하지 않는다(`kafkaTemplate.send()` 자체 호출과
-  `whenComplete` 콜백 양쪽 다 `runCatching`) — AFTER_COMMIT 경로는 Spring이 예외를 삼켜주지만, 직접
-  호출 경로는 안 삼켜서 브로커 장애가 이미 성공한 API를 500으로 만들 수 있었기 때문.
-- 새 프로젝트에서 같은 브로커를 다른 `group-id`로 구독하면 독립적으로 전체 스트림 수신 가능 (같은
-  group-id면 경쟁 컨슈머). 이벤트 DTO 구조가 양쪽에서 일치해야 함.
-- 테스트에서는 `listener.auto-startup: false` + `max.block.ms: 2000`로 브로커 없이도 빠르게 기동.
+  일반 이벤트만 발행 → `OrderEventRelay`가 `@TransactionalEventListener(AFTER_COMMIT)`로 받아 실제
+  Kafka 발행(롤백 시 미발행). 트랜잭션 밖 코드(`OrderCancelService`)는 `OrderEventPublisher` 직접 호출
+- `OrderEventPublisher.send()`는 실패를 절대 상위로 전파 안 함(`kafkaTemplate.send()`/`whenComplete`
+  둘 다 `runCatching`) — AFTER_COMMIT 경로는 Spring이 예외를 삼켜주지만 직접 호출 경로는 안 삼켜서
+  브로커 장애가 이미 성공한 API를 500으로 만들 수 있었기 때문
+- 다른 프로젝트가 같은 브로커를 다른 `group-id`로 구독하면 독립적으로 전체 스트림 수신 가능(같은
+  group-id면 경쟁 컨슈머), 이벤트 DTO 구조는 양쪽 일치 필요
+- 테스트에서는 `listener.auto-startup: false` + `max.block.ms: 2000`로 브로커 없이도 빠르게 기동
 
 ## DB 스키마 (`ddl.sql`)
 
-프로젝트 루트 `ddl.sql`이 스키마 단일 소스, 항상 "새 DB 최초 구축" 전제로 최신 `CREATE TABLE`만 유지
-(모든 `CREATE TABLE`은 항상 최종 컬럼 상태 — 과거 컬럼 추가/삭제/리네임 흔적을 남기지 않는다).
-엔티티 변경 시 `ddl.sql`도 항상 같이 갱신할 것 — `local`/`dev`는 `ddl-auto: none`이라 자동 반영
-안 됨.
+`ddl.sql`이 스키마 단일 소스, 항상 "새 DB 최초 구축" 전제로 최신 `CREATE TABLE`만 유지(과거 컬럼
+추가/삭제/리네임 흔적을 남기지 않음). 엔티티 변경 시 항상 같이 갱신 — `local`/`dev`는 `ddl-auto: none`
+이라 자동 반영 안 됨.
 
-기존에 이미 떠 있는 real DB에 반영할 때 필요한 `ALTER TABLE`은 파일 끝에 임시로 적어두고 사람이
-직접 실행한 뒤 **바로 지운다** — 다음 스키마 변경 때 그대로 남겨두면, 나중에 `CREATE TABLE`에
-이미 흡수된 컬럼을 다시 추가하려 들거나(중복 컬럼 에러) 이미 이름이 바뀐/삭제된 컬럼을 참조하게
-되어(unknown column 에러), 신규 DB에 CREATE부터 전체를 순서대로 실행할 때 중간에 깨진다(실제로
-겪은 사고: `products.stock_count`/`price` 제거와 `cart_items`/`order_items`의
-`product_id`→`product_option_id` 리네임이 `CREATE TABLE`엔 반영됐는데 파일 끝 `ALTER TABLE`은
-옛 상태 그대로 남아있어 총돌). 즉 `ALTER TABLE` 블록은 "지금 막 반영해야 하는 사람을 위한 1회용
-안내문"이지 히스토리 기록이 아니다.
-
-로컬/데모용 상품 데이터는 프로젝트 루트 `seed-data.sql`로 별도 관리 (H2 콘솔 또는 MySQL 클라이언트에서
-직접 실행). `ddl.sql`과 동일하게 "새 DB 최초 구축" 전제 — 멱등성 없어 재실행 시 중복 insert됨. 원래
-`CommandLineRunner`(`LocalDataSeeder`)로 앱 기동 시 자동 시딩했었는데, 앱 코드에 데모 데이터를 심는
-것보다 `ddl.sql`과 같은 방식(사람이 직접 실행하는 SQL)이 일관돼서 SQL 스크립트로 교체함.
-`created_datetime`/`updated_datetime`은 `BaseTimeEntity`(JPA Auditing)가 채우는 컬럼이라 DB 기본값이
-없어 `seed-data.sql`에서 직접 `NOW()`로 채워야 한다.
+- 기존에 이미 떠 있는 real DB에 반영할 `ALTER TABLE`은 파일 끝에 임시로 적어두고 사람이 직접 실행한 뒤
+  **바로 지운다** — 남겨두면 다음 스키마 변경 때 이미 `CREATE TABLE`에 흡수된 컬럼을 중복 추가하려
+  들거나 이미 이름 바뀐/삭제된 컬럼을 참조해, 신규 DB에 CREATE부터 순서대로 실행할 때 중간에 깨짐.
+  `ALTER TABLE` 블록은 "지금 막 반영해야 하는 사람을 위한 1회용 안내문"이지 히스토리 기록이 아님
+- 로컬/데모용 상품 데이터는 `seed-data.sql`로 별도 관리(H2 콘솔/MySQL 클라이언트에서 직접 실행,
+  멱등성 없어 재실행 시 중복 insert). `created_datetime`/`updated_datetime`은 JPA Auditing 컬럼이라
+  DB 기본값이 없어 `seed-data.sql`에서 직접 `NOW()`로 채워야 함
 
 ## 테스트
 
 - `*ControllerTest.kt`: `MockMvc` + 실제 H2 통합 테스트. 외부 API(`TossPaymentsApi`, OAuth 클라이언트)와
-  `RedisRepository`만 `@MockitoBean`. `profile=test`, H2 + `create-drop`.
+  `RedisRepository`만 `@MockitoBean`. `profile=test`, H2 + `create-drop`
 - 결제완료 주문 픽스처는 `productOptionRepository.decreaseStock()`(벌크쿼리)를 트랜잭션 밖에서 직접
   호출하면 `TransactionRequiredException` → `productOption.stockCount` 직접 감소+save 헬퍼
-  (`createPaidOrder`) 사용.
-- **테스트 공백** (향후 보강 필요, 요청 전엔 먼저 손대지 않기): `AuthService` reissue/rotation,
-  `AuthEmailController` login/signup, `OrderShippingService`/`OrderReturnService` 전체(구현만 하고
-  비용 문제로 테스트 미작성), `ProductController`/`CategoryController`/`DeliveryOptionController`(신규
-  조회 API), `OrderController.getOrders()`(목록 API), `CartController`(장바구니 조회/담기/수량변경/삭제)
-  — 전부 구현만 하고 테스트 미작성.
+  (`createPaidOrder`) 사용
+- **테스트 공백**(향후 보강 필요, 요청 전엔 먼저 손대지 않기): `AuthService` reissue/rotation,
+  `AuthEmailController` login/signup, `OrderShippingService`/`OrderReturnService` 전체, `Product`/
+  `Category`/`DeliveryOptionController`(신규 조회 API), `OrderController.getOrders()`(목록 API),
+  `CartController`(장바구니 조회/담기/수량변경/삭제) — 전부 구현만 하고 테스트 미작성
 
 ## 배포
 
-- 로컬: `bootRun --spring.profiles.active=local` (port 16000).
+- 로컬: `bootRun --spring.profiles.active=local` (port 16000)
 - 운영: 맥미니 자가호스팅(`http://hkh7670.iptime.org:8080`), `dev` 프로파일, nginx 리버스 프록시 뒤
-  무중단 배포(`forward-headers-strategy: framework`).
-- CORS는 `SecurityConfig.corsConfigurationSource()` 화이트리스트 방식 — 새 프론트엔드/배포 도메인 추가
-  시 여기 등록 필요 (동일 origin 호출은 CORS 검사 자체가 발동하지 않아 "로컬은 되는데 배포는 안 됨"
-  증상의 전형적 원인).
+  무중단 배포(`forward-headers-strategy: framework`)
+- CORS는 `SecurityConfig.corsConfigurationSource()` 화이트리스트 방식 — 새 프론트엔드/배포 도메인
+  추가 시 여기 등록 필요(동일 origin 호출은 CORS 검사 자체가 발동하지 않아 "로컬은 되는데 배포는
+  안 됨" 증상의 전형적 원인)
 
-## 관련 프로젝트 / 문서
+## 알려진 이슈 / 향후 과제
+
+- 카테고리 leaf(소분류) 강제 여부 미정 — 위 "상품/카테고리" 섹션 참고
+- 쿠폰/포인트: 아직 미구현. 도입 시 할인은 **주문 생성 시점에 서버가 확정**(`OrderService.createOrder`가
+  쿠폰/포인트를 검증·차감하고 최종 결제금액을 스냅샷 저장)하는 방향으로 설계 — `PaymentService`의
+  "요청 금액 == Toss 승인 금액 == 서버 확정 금액" 3자 일치 검증은 그대로 유지, 느슨하게 풀지 않는다
+
+## 관련 프로젝트
 
 - `/Users/kyu/workspace/e-commerce-frontend`: 쿠팡 스타일 쇼핑몰 메인 프론트엔드(React+Vite+TS). 홈/상품
   목록·검색/상품상세/장바구니/주문·결제(Toss)/주문내역·취소·반품/로그인(이메일+OAuth) 전체 구현. 백엔드
-  API 변경 시 같이 갱신 필요. 자체 CLAUDE.md 참고.
+  API 변경 시 같이 갱신 필요. 자체 CLAUDE.md 참고
 - `/Users/kyu/workspace/backend-test-client`: 수동 테스트용 Vite+React+TS 프론트엔드(OAuth 로그인,
-  주문, Toss 결제 테스트). 백엔드 API 변경 시 필요하면 같이 갱신.
-- `docs/oauth-pkce-login.md`: OAuth PKCE 흐름 (API 베이스 경로는 구버전, 위 인증 섹션 참고).
-- `docs/order-toss-payment-integration.md`: 주문/Toss 결제 연동 설계 문서.
+  주문, Toss 결제 테스트). 백엔드 API 변경 시 필요하면 같이 갱신
