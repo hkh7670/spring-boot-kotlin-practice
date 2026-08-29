@@ -36,6 +36,9 @@ enum class ResponseCodeEnum(
     ADMIN_NOT_INACTIVE(HttpStatus.CONFLICT, "1020", "휴면 상태의 관리자만 활성화할 수 있습니다."),
     NOT_FOUND_CART_ITEM(HttpStatus.NOT_FOUND, "1021", "장바구니에 담긴 상품 정보가 존재하지 않습니다."),
     NOT_FOUND_PRODUCT_OPTION(HttpStatus.NOT_FOUND, "1022", "상품 옵션 정보가 존재하지 않습니다."),
+    NOT_FOUND_TOTP_ENROLLMENT(HttpStatus.NOT_FOUND, "1023", "TOTP 등록 요청 정보가 존재하지 않습니다. 등록을 다시 시작해주세요."),
+    TOTP_ALREADY_ENABLED(HttpStatus.CONFLICT, "1024", "이미 TOTP 2단계 인증이 활성화되어 있습니다."),
+    TOTP_NOT_ENABLED(HttpStatus.CONFLICT, "1025", "TOTP 2단계 인증이 활성화되어 있지 않습니다."),
 
     // Auth Error (4000 ~)
     INVALID_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "4000", "유효하지 않은 JWT Token 입니다."),
@@ -45,6 +48,8 @@ enum class ResponseCodeEnum(
     INVALID_TEMP_TOKEN(HttpStatus.UNAUTHORIZED, "4004", "유효하지 않은 임시 토큰 입니다."),
     ALREADY_REGISTERED_OAUTH(HttpStatus.CONFLICT, "4005", "이미 가입된 OAuth 계정입니다."),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "4006", "이메일 또는 비밀번호가 올바르지 않습니다."),
+    INVALID_TOTP_CODE(HttpStatus.UNAUTHORIZED, "4007", "TOTP 코드가 올바르지 않습니다."),
+    INVALID_TOTP_PENDING_TOKEN(HttpStatus.UNAUTHORIZED, "4008", "유효하지 않은 TOTP 인증 토큰입니다."),
 
     // Client Error (8000 ~)
     SCHEMA_VALIDATE_ERROR(HttpStatus.BAD_REQUEST, "8000", "요청 필드에 대한 검증에 실패하였습니다."),

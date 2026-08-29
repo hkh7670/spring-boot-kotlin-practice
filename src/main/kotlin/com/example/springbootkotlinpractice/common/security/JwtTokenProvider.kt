@@ -66,6 +66,25 @@ class JwtTokenProvider(
         return TempTokenClaims.from(claims)
     }
 
+    // EMAIL 로그인 시 TOTP가 활성화된 회원에게 발급되는 pending 토큰. 클레임은 REFRESH_TOKEN과 동일한
+    // {id, tokenType}뿐이라 별도 Claims 클래스 없이 JwtTokenClaims를 재사용한다.
+    fun createTotpPendingToken(memberId: Long): String {
+        return buildToken(
+            memberId = memberId,
+            validityMs = jwtProperties.tempTokenValidityMs,
+            extraClaims = JwtTokenClaims.of(id = memberId, tokenType = TokenType.TOTP_PENDING_TOKEN).toMap(),
+        )
+    }
+
+    fun parseTotpPendingToken(token: String): Long {
+        val claims = runCatching { parse(token) }
+            .getOrElse { throw ApiErrorException(ResponseCodeEnum.INVALID_TOTP_PENDING_TOKEN) }
+        if (claims["tokenType"]?.toString() != TokenType.TOTP_PENDING_TOKEN.name) {
+            throw ApiErrorException(ResponseCodeEnum.INVALID_TOTP_PENDING_TOKEN)
+        }
+        return claims["id"].toString().toLong()
+    }
+
     fun getMemberId(token: String): Long {
         return parse(token).subject.toLong()
     }

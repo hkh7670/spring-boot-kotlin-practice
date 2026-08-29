@@ -40,7 +40,8 @@ class MemberController(
                 birthDate = member.birthDate,
                 phoneNumber = member.phoneNumber,
                 email = member.email,
-                joinProvider = member.joinProvider
+                joinProvider = member.joinProvider,
+                totpEnabled = member.totpEnabled,
             )
         )
     }

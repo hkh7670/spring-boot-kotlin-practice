@@ -2,9 +2,12 @@ package com.example.springbootkotlinpractice.domain.auth.service
 
 import com.example.springbootkotlinpractice.domain.auth.dto.AuthTokenResponse
 import com.example.springbootkotlinpractice.domain.auth.dto.EmailLoginRequest
+import com.example.springbootkotlinpractice.domain.auth.dto.EmailLoginResponse
 import com.example.springbootkotlinpractice.domain.auth.dto.EmailSignUpRequest
 import com.example.springbootkotlinpractice.domain.auth.dto.OAuthLoginResponse
 import com.example.springbootkotlinpractice.domain.auth.dto.OAuthSignUpRequest
+import com.example.springbootkotlinpractice.domain.auth.dto.TotpLoginRequest
+import com.example.springbootkotlinpractice.domain.auth.enums.EmailLoginStatus
 import com.example.springbootkotlinpractice.domain.auth.enums.OAuthLoginStatus
 import com.example.springbootkotlinpractice.common.config.JwtProperties
 import com.example.springbootkotlinpractice.common.oauth.OAuthUserInfo
@@ -29,6 +32,7 @@ class AuthService(
     private val jwtProperties: JwtProperties,
     private val passwordEncoder: PasswordEncoder,
     private val redisRepository: RedisRepository,
+    private val totpService: TotpService,
 ) {
     companion object {
         private const val REFRESH_TOKEN_KEY_PREFIX = "refresh-token:"
@@ -54,9 +58,10 @@ class AuthService(
         return issue(member.id, member.email, member.joinProvider)
     }
 
-    // 이메일 + 비밀번호로 로그인 후 토큰 발급
+    // 이메일 + 비밀번호로 로그인 후, TOTP가 활성화된 회원이면 pending 토큰만 발급하고 최종 토큰은
+    // totpLogin()에서 발급한다 (oauthLogin()의 LOGIN/NEED_SIGN_UP 상태분기와 동일한 모양)
     @Transactional(readOnly = true)
-    fun login(request: EmailLoginRequest): AuthTokenResponse {
+    fun login(request: EmailLoginRequest): EmailLoginResponse {
         val member = memberRepository.findByEmailAndJoinProvider(request.email, JoinProvider.EMAIL)
             ?: throw ApiErrorException(ResponseCodeEnum.INVALID_CREDENTIALS)
 
@@ -68,6 +73,29 @@ class AuthService(
             throw ApiErrorException(ResponseCodeEnum.INVALID_CREDENTIALS)
         }
 
+        if (member.totpEnabled) {
+            return EmailLoginResponse(
+                status = EmailLoginStatus.NEED_TOTP,
+                totpPendingToken = jwtTokenProvider.createTotpPendingToken(member.id),
+            )
+        }
+        val tokens = issue(member.id, member.email, member.joinProvider)
+        return EmailLoginResponse(
+            status = EmailLoginStatus.LOGIN,
+            accessToken = tokens.accessToken,
+            refreshToken = tokens.refreshToken,
+        )
+    }
+
+    // TOTP pending 토큰 + 코드로 2단계 인증 완료 후 최종 토큰 발급
+    @Transactional(readOnly = true)
+    fun totpLogin(request: TotpLoginRequest): AuthTokenResponse {
+        val memberId = jwtTokenProvider.parseTotpPendingToken(request.totpPendingToken)
+        val member = memberRepository.findByIdOrNull(memberId)
+            ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_USER)
+        if (!totpService.verifyLoginCode(member, request.code)) {
+            throw ApiErrorException(ResponseCodeEnum.INVALID_TOTP_CODE)
+        }
         return issue(member.id, member.email, member.joinProvider)
     }
 

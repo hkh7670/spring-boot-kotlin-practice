@@ -82,8 +82,9 @@ exception/         ApiErrorException, ApiCommonAdvice
   `client_secret`으로 대체). 유니크 제약이 `(provider_id, join_provider)`+`(email, join_provider)`라
   같은 이메일을 OAuth/EMAIL 각각 가입 가능.
 - 실제 OAuth API 경로는 `/api/v1/auth/oauth` (`docs/oauth-pkce-login.md`는 구 경로로 미반영 상태).
-- 토큰 3종(`TokenType`): ACCESS(30분)/REFRESH(14일)/TEMP(10분, OAuth 신규가입 중간단계).
-  `JwtAuthenticationFilter`는 ACCESS_TOKEN일 때만 인증 컨텍스트를 채운다.
+- 토큰 4종(`TokenType`): ACCESS(30분)/REFRESH(14일)/TEMP(10분, OAuth 신규가입 중간단계)/
+  TOTP_PENDING(10분, EMAIL 로그인 2단계 인증 중간단계). `JwtAuthenticationFilter`는 ACCESS_TOKEN일
+  때만 인증 컨텍스트를 채운다.
 - Refresh Token Rotation: Redis에 최신 토큰만 유지(회원당 세션 1개), 재사용 감지 시 강제 로그아웃(401).
 - JWT 서명키는 `secret`을 UTF-8 바이트 그대로 사용 (AES 쪽 `AesCryptoUtil`은 base64 디코딩 — 혼동 주의).
 - `app.oauth.frontend-success-redirect-uri`/`frontend-failure-redirect-uri`(`OAuth2LoginSuccessHandler`/
@@ -92,6 +93,33 @@ exception/         ApiErrorException, ApiCommonAdvice
   기본값 그대로 맞는다. 다른 포트로 프론트를 띄운다면 `.env`의 `OAUTH_FRONTEND_SUCCESS_REDIRECT_URI`/
   `OAUTH_FRONTEND_FAILURE_REDIRECT_URI`를 해당 포트로 오버라이드해야 한다 — 안 하면 로그인 성공/실패 후
   브라우저가 엉뚱한 포트로 리다이렉트되어 "화면이 안 나온다."
+
+### TOTP(OTP 앱) 2단계 인증 — EMAIL 로그인 전용, 선택 기능
+
+이메일 인증코드 방식과 비교 검토 후 TOTP(RFC 6238, `dev.samstevens.totp`)로 결정 — 이 프로젝트엔
+메일 발송 인프라가 전혀 없어(SMTP/메일 API 전무) 이메일 코드 방식은 처음부터 그걸 구축해야 하는
+반면 TOTP는 라이브러리 하나로 끝남. 강제 아님, 회원이 계정 설정에서 켜고 끄는 선택 기능
+(`Member.totpEnabled`).
+
+- `AuthService.login()`이 OAuth의 `oauthLogin()`(LOGIN/NEED_SIGN_UP)과 동일한 상태분기 모양으로
+  바뀜 — `EmailLoginResponse.status`가 `LOGIN`(TOTP 미사용, 즉시 access/refresh 발급)과
+  `NEED_TOTP`(TOTP 사용, `totpPendingToken`만 발급) 중 하나. 최종 토큰은
+  `POST /api/v1/auth/totp/login`(`AuthService.totpLogin()`)에서 발급.
+  **Breaking change**: `/api/v1/auth/email/login` 응답이 기존 `AuthTokenResponse`
+  (`{grantType, accessToken, refreshToken}`)에서 `EmailLoginResponse`
+  (`{status, totpPendingToken?, accessToken?, refreshToken?}`)로 바뀜 — TOTP 미사용 회원도 예외
+  없이 새 포맷을 받는다.
+- 등록/해제는 `TotpController`(`/api/v1/auth/totp/enroll`, `/enroll/confirm`, `/disable`, 모두 인증
+  필요) → `TotpService` 담당. 등록 확정 전 시크릿은 `Member`에 바로 쓰지 않고 Redis에
+  `totp-enroll:{memberId}` 키로 5분 TTL만 두었다가, 첫 코드 검증 성공 시에만
+  `Member.enableTotp()`로 영구 저장한다 — 잘못된 등록 도중 이탈로 계정이 잠기는 것 방지.
+- `Member.totpSecret`은 PII 필드들과 동일한 `Aes256Converter`(고정 IV)로 암호화 저장 — 동등조회가
+  필요 없는 시크릿에는 원래 랜덤 IV가 더 적합하지만, 기존 컨버터 재사용을 우선한 의도적 트레이드오프.
+- 로그인 중간 단계는 OAuth 신규가입의 `TEMP_TOKEN` 패턴과 동일하되, 클레임 모양이 달라
+  (`TempTokenClaims`는 `providerId`/`provider`/`email`/`nickname`, TOTP pending은 `{id, tokenType}`뿐)
+  혼용 위험을 피하려 별도 `TokenType.TOTP_PENDING_TOKEN`으로 분리했다(같은 `TEMP_TOKEN` 타입 태그
+  아래 서로 다른 클레임 모양을 섞지 않음). 클레임이 REFRESH_TOKEN과 동일해 `JwtTokenClaims.of(id,
+  tokenType)`를 그대로 재사용, 유효기간도 기존 `jwtProperties.tempTokenValidityMs`를 재사용.
 
 ## 주문 상태 머신 (`OrderStatus`)
 

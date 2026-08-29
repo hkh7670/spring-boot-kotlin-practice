@@ -12,5 +12,6 @@ data class MemberResponse(
     val phoneNumber: String,
     val email: String?,
     val joinProvider: JoinProvider,
+    val totpEnabled: Boolean,
 ) {
 }

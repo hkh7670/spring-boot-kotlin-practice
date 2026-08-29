@@ -46,6 +46,7 @@ class SecurityConfig(
             "/api/v1/auth/email/**",
             "/api/v1/auth/oauth/**",
             "/api/v1/auth/reissue",
+            "/api/v1/auth/totp/login",
             "/api/v1/admin/accounts",
             "/api/v1/products/**",
             "/api/v1/categories/**",
@@ -61,6 +62,7 @@ class SecurityConfig(
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration().apply {
             allowedOrigins = listOf(
+                "http://127.0.0.1:3000",
                 "http://localhost:3000",
                 "http://localhost:3001",
                 "http://hkh7670.iptime.org:8080",

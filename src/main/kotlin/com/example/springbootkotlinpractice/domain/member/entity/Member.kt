@@ -66,6 +66,15 @@ class Member(
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     val role: Role = Role.USER,
+
+    @Comment("TOTP 시크릿 키 (AES 암호화 저장, 활성화 시에만 존재)")
+    @Convert(converter = Aes256Converter::class)
+    @Column(name = "totp_secret", nullable = true, length = 255)
+    var totpSecret: String? = null,
+
+    @Comment("TOTP 2단계 인증 활성화 여부")
+    @Column(name = "totp_enabled", nullable = false)
+    var totpEnabled: Boolean = false,
 ) : BaseTimeEntity() {
 
     @Id
@@ -73,6 +82,18 @@ class Member(
     @Column(name = "id")
     @Comment("회원 고유 식별자")
     val id: Long = 0L
+
+    // TOTP 등록 확정 시 호출 — 시크릿 저장과 활성화를 한 번에 처리한다
+    fun enableTotp(secret: String) {
+        this.totpSecret = secret
+        this.totpEnabled = true
+    }
+
+    // TOTP 비활성화 시 호출 — 시크릿을 완전히 제거한다
+    fun disableTotp() {
+        this.totpSecret = null
+        this.totpEnabled = false
+    }
 
     companion object {
         fun of(

@@ -4,6 +4,7 @@ import com.example.springbootkotlinpractice.common.dto.CommonResponse
 import com.example.springbootkotlinpractice.common.dto.ResponseHandler
 import com.example.springbootkotlinpractice.domain.auth.dto.AuthTokenResponse
 import com.example.springbootkotlinpractice.domain.auth.dto.EmailLoginRequest
+import com.example.springbootkotlinpractice.domain.auth.dto.EmailLoginResponse
 import com.example.springbootkotlinpractice.domain.auth.dto.EmailSignUpRequest
 import com.example.springbootkotlinpractice.domain.auth.service.AuthService
 import com.example.springbootkotlinpractice.enums.JoinProvider
@@ -42,12 +43,14 @@ class AuthEmailController(
 
     @Operation(
         summary = "Email 로그인 API",
-        description = "Email 계정의 accessToken과 refreshToken을 발급한다.",
+        description = "Email 계정으로 1차 인증한다. TOTP 미사용 회원은 status=LOGIN과 함께 즉시 " +
+                "accessToken/refreshToken을 발급하고, TOTP 사용 회원은 status=NEED_TOTP와 함께 " +
+                "totpPendingToken만 발급한다(최종 토큰은 /api/v1/auth/totp/login에서 발급).",
     )
     @PostMapping("/login")
     fun login(
         @RequestBody @Valid request: EmailLoginRequest
-    ): ResponseEntity<CommonResponse<AuthTokenResponse>> {
+    ): ResponseEntity<CommonResponse<EmailLoginResponse>> {
         return ResponseHandler.ok(
             authService.login(request)
         )

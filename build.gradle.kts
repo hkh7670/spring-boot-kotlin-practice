@@ -77,6 +77,9 @@ dependencies {
     /* Kafka */
     implementation("org.springframework.kafka:spring-kafka")
 
+    /* TOTP (2단계 인증, RFC 6238) */
+    implementation("dev.samstevens.totp:totp:1.7.1")
+
     /* Kotlin Logging */
 //    runtimeOnly("io.github.oshai:kotlin-logging-jvm:8.0.4")
 }
