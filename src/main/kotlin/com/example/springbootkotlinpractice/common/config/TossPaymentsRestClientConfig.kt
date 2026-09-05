@@ -48,8 +48,14 @@ class TossPaymentsRestClientConfig(
             .baseUrl(TOSS_PAYMENTS_BASE_URL)
             .requestFactory(HttpComponentsClientHttpRequestFactory(createApacheHttpClient()))
             .defaultHeader(HttpHeaders.AUTHORIZATION, buildBasicAuthHeader())
-            .defaultStatusHandler({ status: HttpStatusCode -> status.is4xxClientError }, tossErrorHandler())
-            .defaultStatusHandler({ status: HttpStatusCode -> status.is5xxServerError }, tossErrorHandler())
+            .defaultStatusHandler(
+                { status: HttpStatusCode -> status.is4xxClientError },
+                tossErrorHandler()
+            )
+            .defaultStatusHandler(
+                { status: HttpStatusCode -> status.is5xxServerError },
+                tossErrorHandler()
+            )
             .build()
         return HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient))
             .build()
@@ -58,7 +64,8 @@ class TossPaymentsRestClientConfig(
 
     private fun buildBasicAuthHeader(): String {
         val credentials = "${tossPaymentsProperties.secretKey}:"
-        return "Basic " + Base64.getEncoder().encodeToString(credentials.toByteArray(StandardCharsets.UTF_8))
+        return "Basic " + Base64.getEncoder()
+            .encodeToString(credentials.toByteArray(StandardCharsets.UTF_8))
     }
 
     private fun tossErrorHandler(): RestClient.ResponseSpec.ErrorHandler {
@@ -74,7 +81,8 @@ class TossPaymentsRestClientConfig(
     }
 
     private fun logExternalError(request: HttpRequest, response: ClientHttpResponse) {
-        val responseBody = response.body.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+        val responseBody =
+            response.body.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
         logger.error("[Toss Payments Request] {} {}", request.method, request.uri)
         logger.error("[Toss Payments Response] Status Code: {}", response.statusCode.value())
         logger.error("[Toss Payments Response] Body: {}", responseBody)
@@ -108,6 +116,9 @@ class TossPaymentsRestClientConfig(
     }
 
     private fun createRetryStrategy(): DefaultHttpRequestRetryStrategy {
-        return DefaultHttpRequestRetryStrategy(MAX_RETRY_ATTEMPT_COUNT, TimeValue.ofSeconds(RETRY_INTERVAL_SECONDS))
+        return DefaultHttpRequestRetryStrategy(
+            MAX_RETRY_ATTEMPT_COUNT,
+            TimeValue.ofSeconds(RETRY_INTERVAL_SECONDS)
+        )
     }
 }

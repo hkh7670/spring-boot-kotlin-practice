@@ -36,9 +36,10 @@ class TotpService(
 
         val secret = totpProvider.generateSecret()
         redisRepository.save(ENROLL_KEY_PREFIX + memberId, secret, ENROLL_TTL)
+        val email = requireNotNull(member.email) { "EMAIL 회원은 email이 필수" }
         return TotpEnrollResponse(
             secret = secret,
-            otpAuthUri = totpProvider.buildOtpAuthUri(requireNotNull(member.email) { "EMAIL 회원은 email이 필수" }, secret),
+            otpAuthUri = totpProvider.buildOtpAuthUri(email, secret),
         )
     }
 

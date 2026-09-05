@@ -30,7 +30,8 @@ mise exec -- ./gradlew bootRun --args='--spring.profiles.active=local'
 
 ## 포맷팅
 
-IntelliJ Google Style XML import. 실제 적용 결과는 한 줄 100자(전역 120자보다 우선), Kotlin 4-space 들여쓰기.
+IntelliJ Google Style XML import, Kotlin 4-space 들여쓰기. 한 줄 100자 제한은 `.editorconfig`에
+명시(IntelliJ가 자동 인식, CLI 강제는 아직 없음 — 필요해지면 ktlint 도입 검토).
 
 ## 패키지 구조
 

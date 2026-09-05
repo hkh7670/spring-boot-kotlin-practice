@@ -30,7 +30,8 @@ class TotpController(
 
     @Operation(
         summary = "TOTP 2단계 인증 로그인 API",
-        description = "Email 로그인에서 받은 totpPendingToken과 OTP 앱 코드로 최종 accessToken/refreshToken을 발급한다.",
+        description = "Email 로그인에서 받은 totpPendingToken과 OTP 앱 코드로 최종 accessToken/refreshToken을 " +
+                "발급한다.",
     )
     @PostMapping("/login")
     fun login(
