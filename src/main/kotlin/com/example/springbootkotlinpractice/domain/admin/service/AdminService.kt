@@ -26,7 +26,8 @@ class AdminService(
                 Admin.of(
                     name = request.name,
                     email = request.email,
-                    password = passwordEncoder.encode(request.password),
+                    password = passwordEncoder.encode(request.password)
+                        ?: throw ApiErrorException(ResponseCodeEnum.INTERNAL_SERVER_ERROR),
                 )
             )
         } catch (e: DataIntegrityViolationException) {

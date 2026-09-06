@@ -1,5 +1,7 @@
 package com.example.springbootkotlinpractice.common.oauth
 
+import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
+import com.example.springbootkotlinpractice.exception.ApiErrorException
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService
 import org.springframework.security.oauth2.core.oidc.user.OidcUser
@@ -12,7 +14,8 @@ class CustomOidcUserService : OidcUserService() {
     override fun loadUser(userRequest: OidcUserRequest): OidcUser {
         val oidcUser = super.loadUser(userRequest)
         val oAuthUserInfo = OAuthUserInfo(
-            providerId = oidcUser.subject,
+            providerId = oidcUser.subject
+                ?: throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR),
             email = oidcUser.email,
             nickname = oidcUser.fullName ?: oidcUser.givenName,
         )

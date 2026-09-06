@@ -1,17 +1,53 @@
 # spring-boot-kotlin-practice
 
-Kotlin + Spring Boot 3 학습/실습 프로젝트. OAuth 로그인, JWT 인증, 주문/결제(Toss Payments), Kafka
+Kotlin + Spring Boot 4 학습/실습 프로젝트. OAuth 로그인, JWT 인증, 주문/결제(Toss Payments), Kafka
 이벤트 발행을 직접 구현하며 Spring 생태계를 익히는 것이 목적.
 
 ## 기술 스택
 
-- Kotlin 2.4.10 / Java 21 (`kotlin("plugin.spring")`, `kotlin("plugin.jpa")`, `kapt`), Gradle Kotlin DSL
-- Spring Boot 3.5.16 (web, data-jpa, security, validation, data-redis)
-- DB: MySQL(운영/dev), H2(local/test) — QueryDSL(OpenFeign jakarta 포크)
+- Kotlin 2.4.10 / JDK 25 (`kotlin("plugin.spring")`, `kotlin("plugin.jpa")`, `kapt`), Gradle 9.7.1 Kotlin DSL
+- Spring Boot 4.1.1 (Spring Framework 7, Jakarta EE 11) — web, data-jpa, security, validation, data-redis
+- DB: MySQL(운영/dev), H2(local/test) — QueryDSL(OpenFeign jakarta 포크, 7.6+)
 - 인증: JWT(`jjwt`, HMAC) + Redis(refresh token rotation) + Spring Security
 - 외부 연동: Google/Kakao/Naver OAuth(PKCE), Toss Payments, Spring Kafka(외부 Docker 브로커)
-- API 문서: springdoc-openapi (`/swagger.html`)
+- API 문서: springdoc-openapi 3.x (`/swagger.html`)
 - ULID(`ulid-creator`) — 외부 노출용 식별자(`orderUid` 등)
+
+### Spring Boot 4 마이그레이션 메모 (3.5.16→4.1.1, JDK 21→25, 2026-09)
+
+Boot 4는 기존 단일 `spring-boot-autoconfigure` jar를 기능별 수십 개 모듈로 쪼갬 — starter 없이 순수
+라이브러리만 의존성으로 추가하면 그 기능의 autoconfigure 모듈이 안 딸려와 런타임에만 조용히 실패한다
+(컴파일은 되는 경우도 있어 더 위험). 겪은 것들:
+
+- `PathRequest`: `o.s.boot.autoconfigure.security.servlet` → `o.s.boot.security.autoconfigure.web.servlet`로
+  패키지 이동
+- `@AutoConfigureMockMvc`: `spring-boot-test-autoconfigure`에서 완전히 빠짐 — 신규 모듈
+  `spring-boot-webmvc-test`(패키지도 `o.s.boot.webmvc.test.autoconfigure`로 이동)를
+  `testImplementation`으로 별도 추가해야 함
+- H2 콘솔(`PathRequest.toH2Console()`)도 별도 모듈 `spring-boot-h2console`로 분리 — `runtimeOnly` 추가
+- `org.springframework.kafka:spring-kafka`를 스타터 없이 raw로만 넣으면 `KafkaTemplate` 빈 자체가 안
+  생김 — 신규 공식 스타터 `org.springframework.boot:spring-boot-starter-kafka`로 교체
+- Jackson 기본값이 Jackson 3(`tools.jackson.*`)로 바뀌어 `com.fasterxml.jackson.databind.ObjectMapper`
+  빈이 기본으로 안 생김. Jackson 3 전면 마이그레이션은 범위 밖이라 공식 가이드의 "임시 Jackson 2 유지"
+  경로 채택 — `org.springframework.boot:spring-boot-jackson2` 추가로 classic `ObjectMapper` 복원.
+  단, Kotlin `val isXxx: Boolean` 프로퍼티의 JSON 필드명이 실제 응답을 태우는 스택에 따라 달라질 수
+  있어(jackson-module-kotlin의 "is" 유지 특수처리가 Jackson 3 경로엔 없음) API 계약상 중요한 필드는
+  `@get:JsonProperty("isXxx")`로 명시 고정할 것(`OrderDetailResponse.isPaid` 참고)
+- Spring Security 7: 람다 DSL(`authorizeHttpRequests`, `.oauth2Login {}` 등)은 그대로지만
+  `OidcUserInfo.subject`/`userNameAttributeName`/`PasswordEncoder.encode()` 반환값 등 일부 API의
+  nullability가 엄격해짐(`-Xjsr305=strict`라 컴파일타임에 드러남) — 전부 외부 시스템발 이상으로 간주해
+  `ApiErrorException(EXTERNAL_SERVER_ERROR / INTERNAL_SERVER_ERROR)`로 처리
+- Gradle 8.14.5는 JDK 25 위에서 데몬 자체가 기동 안 됨(에러 메시지도 불명확) — Gradle 9.7.1로 wrapper
+  업그레이드 필요
+- Spring Framework 7의 테스트 컨텍스트 "restart" 경로(캐시된 컨텍스트를 여러 테스트 클래스가 재사용할
+  때)는 `spring.kafka.listener.auto-startup: false`를 우회해 리스너 시작을 시도함 — 테스트 프로파일에
+  `spring.kafka.consumer.group-id`가 원래 빠져있던 잠재적 설정 누락이 이때 처음 드러남(지금까지는
+  리스너가 아예 안 뜨니 안 걸렸을 뿐). 테스트 kafka 설정에도 운영과 동일하게 group-id를 채워둘 것
+- `springdoc.show-actuator: true`(`application-local.yml`/`application-dev.yml`)가 부팅 자체를
+  깨뜨림 — actuator 의존성이 없는 프로젝트라 원래도 쓸모없던 설정이었는데, springdoc 3.1.0의
+  `actuatorProvider` 빈이 `ManagementServerProperties`(actuator 전용 클래스)를 제네릭 파라미터로
+  참조하는 과정에서 `ClassNotFoundException`으로 전체 컨텍스트 기동이 실패함. 테스트(MockMvc)는 이
+  프로파일을 안 타서 안 걸리고 실제 `bootRun`에서만 드러남 — actuator 도입 전까지는 `false` 유지
 
 ## 빌드 / 실행
 

@@ -16,6 +16,7 @@ class CustomOAuth2UserService : DefaultOAuth2UserService() {
         val registrationId = userRequest.clientRegistration.registrationId
         val nameAttributeKey = userRequest.clientRegistration.providerDetails
             .userInfoEndpoint.userNameAttributeName
+            ?: throw ApiErrorException(ResponseCodeEnum.EXTERNAL_SERVER_ERROR)
 
         val oAuthUserInfo = when (registrationId) {
             "kakao" -> toKakaoUserInfo(oAuth2User.attributes)

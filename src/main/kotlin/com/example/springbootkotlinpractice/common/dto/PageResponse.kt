@@ -11,7 +11,7 @@ data class PageResponse<T>(
     val hasNext: Boolean,
 ) {
     companion object {
-        fun <T> of(page: Page<T>): PageResponse<T> {
+        fun <T : Any> of(page: Page<T>): PageResponse<T> {
             return PageResponse(
                 content = page.content,
                 page = page.number,

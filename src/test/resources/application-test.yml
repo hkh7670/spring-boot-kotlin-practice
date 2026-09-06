@@ -7,6 +7,8 @@ spring:
   # 컨슈머는 아예 폴링을 시작하지 않도록 auto-startup 을 끈다.
   kafka:
     bootstrap-servers: localhost:19092
+    consumer:
+      group-id: test-group
     producer:
       properties:
         max.block.ms: 2000

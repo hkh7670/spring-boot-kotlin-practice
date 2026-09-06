@@ -4,7 +4,7 @@ plugins {
     kotlin("plugin.spring") version kotlinVersion
     kotlin("plugin.jpa") version kotlinVersion
     kotlin("kapt") version kotlinVersion
-    id("org.springframework.boot") version "3.5.16"
+    id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -24,11 +24,11 @@ tasks.jar {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
-val querydslVersion = "7.4.0"
+val querydslVersion = "7.6"
 
 repositories {
     mavenCentral()
@@ -39,6 +39,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    // Boot 4 기본값은 Jackson 3(신규 tools.jackson.* 스택)이라 classic ObjectMapper 빈이 없음 —
+    // Jackson 3 전면 마이그레이션은 범위 밖이라 공식 가이드의 "임시 Jackson 2 유지" 경로를 택함
+    implementation("org.springframework.boot:spring-boot-jackson2")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     // JWT (jjwt 0.12.x)
@@ -51,14 +54,17 @@ dependencies {
     kapt("io.github.openfeign.querydsl:querydsl-apt:$querydslVersion:jakarta")
 
     runtimeOnly("com.h2database:h2")
+    // H2 콘솔 자동설정이 Boot 4에서 별도 모듈로 분리됨(PathRequest.toH2Console()이 런타임에 필요)
+    runtimeOnly("org.springframework.boot:spring-boot-h2console")
     runtimeOnly("com.mysql:mysql-connector-j")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-webmvc-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     /* Swagger */
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
 
     /* Spring Security */
     implementation("org.springframework.boot:spring-boot-starter-security")
@@ -75,7 +81,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     /* Kafka */
-    implementation("org.springframework.kafka:spring-kafka")
+    implementation("org.springframework.boot:spring-boot-starter-kafka")
 
     /* TOTP (2단계 인증, RFC 6238) */
     implementation("dev.samstevens.totp:totp:1.7.1")

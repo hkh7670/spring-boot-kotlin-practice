@@ -81,7 +81,7 @@ springdoc:
     path: /swagger.html
   api-docs:
     path: /api-docs
-  show-actuator: true
+  show-actuator: false
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
   writer-with-default-pretty-printer: true

@@ -6,7 +6,7 @@ import com.example.springbootkotlinpractice.common.security.JwtAuthenticationFil
 import com.example.springbootkotlinpractice.domain.auth.service.OAuth2LoginFailureHandler
 import com.example.springbootkotlinpractice.domain.auth.service.OAuth2LoginSuccessHandler
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.autoconfigure.security.servlet.PathRequest
+import org.springframework.boot.security.autoconfigure.web.servlet.PathRequest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity

@@ -51,7 +51,8 @@ class AuthService(
                 birthDate = request.birthDate,
                 phoneNumber = request.phoneNumber,
                 email = request.email,
-                password = passwordEncoder.encode(request.password),
+                password = passwordEncoder.encode(request.password)
+                    ?: throw ApiErrorException(ResponseCodeEnum.INTERNAL_SERVER_ERROR),
                 joinProvider = joinProvider,
             )
         )
