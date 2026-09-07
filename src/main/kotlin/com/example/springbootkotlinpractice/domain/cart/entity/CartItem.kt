@@ -8,7 +8,6 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
-import org.hibernate.annotations.Comment
 
 @Entity
 @Table(
@@ -16,20 +15,23 @@ import org.hibernate.annotations.Comment
     uniqueConstraints = [
         UniqueConstraint(name = "uq_cart_items_01", columnNames = ["member_id", "product_option_id"]),
     ],
+    comment = "회원별 장바구니 상품",
 )
-@Comment("회원별 장바구니 상품")
 class CartItem(
 
-    @Comment("장바구니 소유 회원 ID (members.id)")
-    @Column(name = "member_id", nullable = false, updatable = false)
+    @Column(
+        name = "member_id", nullable = false, updatable = false,
+        comment = "장바구니 소유 회원 ID (members.id)",
+    )
     val memberId: Long,
 
-    @Comment("상품 옵션 ID (product_options.id)")
-    @Column(name = "product_option_id", nullable = false, updatable = false)
+    @Column(
+        name = "product_option_id", nullable = false, updatable = false,
+        comment = "상품 옵션 ID (product_options.id)",
+    )
     val productOptionId: Long,
 
-    @Comment("담은 수량")
-    @Column(name = "count", nullable = false)
+    @Column(name = "count", nullable = false, comment = "담은 수량")
     var count: Int,
 ) : BaseTimeEntity() {
 

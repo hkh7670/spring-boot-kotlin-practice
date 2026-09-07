@@ -10,35 +10,28 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
-import org.hibernate.annotations.Comment
 
 @Entity
-@Table(name = "product_options")
-@Comment("상품 옵션(변형) 정보")
+@Table(name = "product_options", comment = "상품 옵션(변형) 정보")
 class ProductOption(
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id")
-    @Comment("상품 ID (products.id)")
+    @JoinColumn(name = "product_id", comment = "상품 ID (products.id)")
     val product: Product,
 
-    @Comment("옵션 명 (예: 블랙 / L사이즈)")
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100, comment = "옵션 명 (예: 블랙 / L사이즈)")
     val name: String,
 
-    @Comment("옵션별 가격")
-    @Column(name = "price", nullable = false)
+    @Column(name = "price", nullable = false, comment = "옵션별 가격")
     var price: Int,
 
-    @Comment("옵션별 재고 수량")
-    @Column(name = "stock_count", nullable = false)
+    @Column(name = "stock_count", nullable = false, comment = "옵션별 재고 수량")
     var stockCount: Int = 0,
 ) : BaseTimeEntity() {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    @Comment("상품 옵션 고유 식별자")
+    @Column(name = "id", comment = "상품 옵션 고유 식별자")
     val id: Long = 0L
 
     companion object {

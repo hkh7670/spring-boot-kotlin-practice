@@ -7,26 +7,21 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
-import org.hibernate.annotations.Comment
 
 @Entity
-@Table(name = "delivery_options")
-@Comment("배송 옵션 관련 정보")
+@Table(name = "delivery_options", comment = "배송 옵션 관련 정보")
 class DeliveryOption(
 
-    @Comment("배송 옵션 명")
-    @Column(name = "name", nullable = false, length = 50)
+    @Column(name = "name", nullable = false, length = 50, comment = "배송 옵션 명")
     var name: String,
 
-    @Comment("배송 가격")
-    @Column(name = "price", nullable = false)
+    @Column(name = "price", nullable = false, comment = "배송 가격")
     var price: Int,
 ) : BaseTimeEntity() {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    @Comment("배송 정보 고유 식별자")
+    @Column(name = "id", comment = "배송 정보 고유 식별자")
     val id: Long = 0L
 
     companion object {

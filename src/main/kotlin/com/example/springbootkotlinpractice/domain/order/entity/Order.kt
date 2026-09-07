@@ -6,46 +6,47 @@ import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import com.github.f4b6a3.ulid.UlidCreator
 import jakarta.persistence.*
-import org.hibernate.annotations.Comment
 
 @Entity
 @Table(
     name = "orders",
     uniqueConstraints = [
         UniqueConstraint(name = "uq_orders_01", columnNames = ["order_uid"]),
-    ]
+    ],
+    comment = "주문 정보",
 )
-@Comment("주문 정보")
 class Order(
 
-    @Comment("외부 노출용 주문 식별자 (ULID, Toss orderId)")
-    @Column(name = "order_uid", nullable = false, updatable = false, length = 26)
+    @Column(
+        name = "order_uid", nullable = false, updatable = false, length = 26,
+        comment = "외부 노출용 주문 식별자 (ULID, Toss orderId)",
+    )
     val orderUid: String = UlidCreator.getUlid().toString(),
 
-    @Comment("주문한 유저의 ID (member.id)")
-    @Column(name = "member_id", nullable = false, updatable = false)
+    @Column(name = "member_id", nullable = false, updatable = false, comment = "주문한 유저의 ID (member.id)")
     val memberId: Long,
 
-    @Comment("상품 전체 가격")
-    @Column(name = "product_total_price", nullable = false)
+    @Column(name = "product_total_price", nullable = false, comment = "상품 전체 가격")
     var productTotalPrice: Int = 0,
 
-    @Comment("배송 옵션 정보 ID (delivery_options.id)")
-    @Column(name = "delivery_option_id", nullable = false, updatable = false)
+    @Column(
+        name = "delivery_option_id", nullable = false, updatable = false,
+        comment = "배송 옵션 정보 ID (delivery_options.id)",
+    )
     val deliveryOptionId: Long,
 
-    @Comment("주문 시점의 배송 가격 (delivery_info.price 는 이후 변경될 수 있어 스냅샷 저장)")
-    @Column(name = "delivery_price", nullable = false, updatable = false)
+    @Column(
+        name = "delivery_price", nullable = false, updatable = false,
+        comment = "주문 시점의 배송 가격 (delivery_info.price 는 이후 변경될 수 있어 스냅샷 저장)",
+    )
     val deliveryPrice: Int = 0,
 
     // 주문 생성 트랜잭션 안에서 쿠폰/포인트 확정 후 applyDiscount()로 채워진다(주문 저장 시점엔
     // orderId가 없어 쿠폰/포인트 사용 확정을 먼저 할 수 없기 때문 — OrderService.createOrder() 참고)
-    @Comment("쿠폰으로 할인된 금액 (미사용 시 0)")
-    @Column(name = "coupon_discount_price", nullable = false)
+    @Column(name = "coupon_discount_price", nullable = false, comment = "쿠폰으로 할인된 금액 (미사용 시 0)")
     var couponDiscountPrice: Int = 0,
 
-    @Comment("포인트로 할인된 금액 (미사용 시 0)")
-    @Column(name = "point_discount_price", nullable = false)
+    @Column(name = "point_discount_price", nullable = false, comment = "포인트로 할인된 금액 (미사용 시 0)")
     var pointDiscountPrice: Int = 0,
 
     // Kotlin 문법상 주 생성자 프로퍼티에는 접근자(private/protected set)를 붙일 수 없다. 컴파일 타임으로
@@ -54,9 +55,8 @@ class Order(
     // 주문취소/반품완료)는 중복 요청 레이스를 막기 위해 이 엔티티 메서드 대신
     // OrderRepository.updateStatusIfCurrent() 원자적 조건부 UPDATE를 쓴다 (PaymentRecordService,
     // OrderCancelRecordService, OrderReturnRecordService 참고).
-    @Comment("주문 상태")
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 30)
+    @Column(name = "status", nullable = false, length = 30, comment = "주문 상태")
     var status: OrderStatus = OrderStatus.PENDING_PAYMENT,
 ) : BaseTimeEntity() {
 

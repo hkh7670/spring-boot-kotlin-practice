@@ -7,25 +7,26 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
-import org.hibernate.annotations.Comment
 
 // 포인트 사용 내역 (append-only) — 주문취소/반품/결제실패 시 order_id로 조회해 각 memberPointId에
 // usedAmount만큼 원복한다. 재고 히스토리(OrderStatusHistory)처럼 FK 제약은 의도적으로 두지 않는다.
 @Entity
-@Table(name = "member_point_usages")
-@Comment("포인트 사용 내역 (주문 취소/반품 시 원복 기준)")
+@Table(name = "member_point_usages", comment = "포인트 사용 내역 (주문 취소/반품 시 원복 기준)")
 class MemberPointUsage(
 
-    @Comment("포인트를 사용한 주문 ID (orders.id)")
-    @Column(name = "order_id", nullable = false, updatable = false)
+    @Column(
+        name = "order_id", nullable = false, updatable = false,
+        comment = "포인트를 사용한 주문 ID (orders.id)",
+    )
     val orderId: Long,
 
-    @Comment("차감된 포인트 적립건 ID (member_points.id)")
-    @Column(name = "member_point_id", nullable = false, updatable = false)
+    @Column(
+        name = "member_point_id", nullable = false, updatable = false,
+        comment = "차감된 포인트 적립건 ID (member_points.id)",
+    )
     val memberPointId: Long,
 
-    @Comment("이 적립건에서 사용한 금액")
-    @Column(name = "used_amount", nullable = false, updatable = false)
+    @Column(name = "used_amount", nullable = false, updatable = false, comment = "이 적립건에서 사용한 금액")
     val usedAmount: Int,
 ) : BaseTimeEntity() {
 

@@ -7,46 +7,39 @@ import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import jakarta.persistence.*
 import java.time.LocalDateTime
-import org.hibernate.annotations.Comment
 
 @Entity
 @Table(
     name = "admins",
     uniqueConstraints = [
         UniqueConstraint(name = "uq_admins_01", columnNames = ["email"]),
-    ]
+    ],
+    comment = "관리자 정보",
 )
-@Comment("관리자 정보")
 class Admin(
 
-    @Comment("이름 (AES 암호화 저장)")
     @Convert(converter = Aes256Converter::class)
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100, comment = "이름 (AES 암호화 저장)")
     var name: String,
 
-    @Comment("이메일 (AES 암호화 저장)")
     @Convert(converter = Aes256Converter::class)
-    @Column(name = "email", nullable = false, length = 100)
+    @Column(name = "email", nullable = false, length = 100, comment = "이메일 (AES 암호화 저장)")
     val email: String,
 
-    @Comment("비밀번호 (BCrypt 해시)")
-    @Column(name = "password", nullable = false, length = 100)
+    @Column(name = "password", nullable = false, length = 100, comment = "비밀번호 (BCrypt 해시)")
     var password: String,
 
-    @Comment("계정 상태")
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20, comment = "계정 상태")
     var status: AdminStatus = AdminStatus.ACTIVE,
 
-    @Comment("탈퇴 일시 (개인정보 파기 배치 기준일)")
-    @Column(name = "withdrawn_datetime", nullable = true)
+    @Column(name = "withdrawn_datetime", nullable = true, comment = "탈퇴 일시 (개인정보 파기 배치 기준일)")
     var withdrawnDatetime: LocalDateTime? = null,
 ) : BaseTimeEntity() {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    @Comment("관리자 고유 식별자")
+    @Column(name = "id", comment = "관리자 고유 식별자")
     val id: Long = 0L
 
     fun markInactive() {

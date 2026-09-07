@@ -11,43 +11,43 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.LocalDateTime
-import org.hibernate.annotations.Comment
 
 // 잔액 차감/원복은 MemberPointRepository.deductIfEnough()/restore()(조건부 UPDATE)로 처리한다 —
 // decreaseStock()/increaseStock()과 동일한 컨벤션. 이 엔티티의 remainingAmount/status는 조회용일 뿐,
 // 여기서 직접 값을 바꾸지 않는다.
 @Entity
-@Table(name = "member_points")
-@Comment("회원별 포인트 적립 내역 (잔액 관리)")
+@Table(name = "member_points", comment = "회원별 포인트 적립 내역 (잔액 관리)")
 class MemberPoint(
 
-    @Comment("포인트를 보유한 회원 ID (members.id)")
-    @Column(name = "member_id", nullable = false, updatable = false)
+    @Column(
+        name = "member_id", nullable = false, updatable = false,
+        comment = "포인트를 보유한 회원 ID (members.id)",
+    )
     val memberId: Long,
 
-    @Comment("포인트 템플릿 ID (points.id)")
-    @Column(name = "point_id", nullable = false, updatable = false)
+    @Column(name = "point_id", nullable = false, updatable = false, comment = "포인트 템플릿 ID (points.id)")
     val pointId: Long,
 
-    @Comment("원 적립 금액")
-    @Column(name = "amount", nullable = false, updatable = false)
+    @Column(name = "amount", nullable = false, updatable = false, comment = "원 적립 금액")
     val amount: Int,
 
-    @Comment("남은 사용 가능 금액")
-    @Column(name = "remaining_amount", nullable = false)
+    @Column(name = "remaining_amount", nullable = false, comment = "남은 사용 가능 금액")
     var remainingAmount: Int,
 
-    @Comment("포인트 상태 (ACTIVE/EXHAUSTED/EXPIRED)")
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(
+        name = "status", nullable = false, length = 20,
+        comment = "포인트 상태 (ACTIVE/EXHAUSTED/EXPIRED)",
+    )
     var status: MemberPointStatus = MemberPointStatus.ACTIVE,
 
-    @Comment("적립 일시")
-    @Column(name = "issued_at", nullable = false, updatable = false)
+    @Column(name = "issued_at", nullable = false, updatable = false, comment = "적립 일시")
     val issuedAt: LocalDateTime = LocalDateTime.now(),
 
-    @Comment("사용 가능 마감 일시 (NULL이면 무제한)")
-    @Column(name = "expired_at", nullable = true, updatable = false)
+    @Column(
+        name = "expired_at", nullable = true, updatable = false,
+        comment = "사용 가능 마감 일시 (NULL이면 무제한)",
+    )
     val expiredAt: LocalDateTime? = null,
 ) : BaseTimeEntity() {
 

@@ -7,38 +7,30 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
-import org.hibernate.annotations.Comment
 
 @Entity
-@Table(name = "products")
-@Comment("상품 정보")
+@Table(name = "products", comment = "상품 정보")
 class Product(
 
-    @Comment("상품 명")
-    @Column(name = "name", nullable = false, length = 50)
+    @Column(name = "name", nullable = false, length = 50, comment = "상품 명")
     var name: String,
 
-    @Comment("상품 상세 설명")
-    @Column(name = "description", nullable = true, columnDefinition = "TEXT")
+    @Column(name = "description", nullable = true, columnDefinition = "TEXT", comment = "상품 상세 설명")
     var description: String? = null,
 
-    @Comment("대표 이미지 URL")
-    @Column(name = "image_url", nullable = true, length = 500)
+    @Column(name = "image_url", nullable = true, length = 500, comment = "대표 이미지 URL")
     var imageUrl: String? = null,
 
-    @Comment("카테고리 ID (categories.id, 소분류)")
-    @Column(name = "category_id", nullable = true)
+    @Column(name = "category_id", nullable = true, comment = "카테고리 ID (categories.id, 소분류)")
     var categoryId: Long? = null,
 
-    @Comment("업체 ID (vendors.id)")
-    @Column(name = "vendor_id", nullable = true)
+    @Column(name = "vendor_id", nullable = true, comment = "업체 ID (vendors.id)")
     var vendorId: Long? = null,
 ) : BaseTimeEntity() {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    @Comment("상품 고유 식별자")
+    @Column(name = "id", comment = "상품 고유 식별자")
     val id: Long = 0L
 
     companion object {

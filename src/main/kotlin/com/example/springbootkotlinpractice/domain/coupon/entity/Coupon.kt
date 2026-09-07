@@ -11,36 +11,34 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.LocalDateTime
-import org.hibernate.annotations.Comment
 
 @Entity
-@Table(name = "coupons")
-@Comment("쿠폰 템플릿(정의) 정보")
+@Table(name = "coupons", comment = "쿠폰 템플릿(정의) 정보")
 class Coupon(
 
-    @Comment("쿠폰 명")
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100, comment = "쿠폰 명")
     var name: String,
 
-    @Comment("할인 방식 (FIXED/PERCENTAGE)")
     @Enumerated(EnumType.STRING)
-    @Column(name = "discount_type", nullable = false, length = 20)
+    @Column(
+        name = "discount_type", nullable = false, length = 20,
+        comment = "할인 방식 (FIXED/PERCENTAGE)",
+    )
     val discountType: CouponDiscountType,
 
-    @Comment("할인액(FIXED) 또는 할인율%(PERCENTAGE)")
-    @Column(name = "discount_value", nullable = false)
+    @Column(name = "discount_value", nullable = false, comment = "할인액(FIXED) 또는 할인율%(PERCENTAGE)")
     var discountValue: Int,
 
-    @Comment("정률 할인 시 최대 할인 금액 (FIXED이면 NULL)")
-    @Column(name = "max_discount_price", nullable = true)
+    @Column(
+        name = "max_discount_price", nullable = true,
+        comment = "정률 할인 시 최대 할인 금액 (FIXED이면 NULL)",
+    )
     var maxDiscountPrice: Int? = null,
 
-    @Comment("쿠폰 적용 가능한 최소 주문 금액(상품 금액 기준)")
-    @Column(name = "min_order_price", nullable = false)
+    @Column(name = "min_order_price", nullable = false, comment = "쿠폰 적용 가능한 최소 주문 금액(상품 금액 기준)")
     var minOrderPrice: Int = 0,
 
-    @Comment("쿠폰 사용 가능 마감 일시 (캠페인 공통)")
-    @Column(name = "valid_until", nullable = false)
+    @Column(name = "valid_until", nullable = false, comment = "쿠폰 사용 가능 마감 일시 (캠페인 공통)")
     val validUntil: LocalDateTime,
 ) : BaseTimeEntity() {
 

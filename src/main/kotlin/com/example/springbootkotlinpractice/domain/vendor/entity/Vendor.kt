@@ -7,23 +7,21 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
-import org.hibernate.annotations.Comment
 
 @Entity
-@Table(name = "vendors")
-@Comment("상품 업체(공급사) 정보")
+@Table(name = "vendors", comment = "상품 업체(공급사) 정보")
 class Vendor(
 
-    @Comment("업체명")
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100, comment = "업체명")
     var name: String,
 
-    @Comment("사업자등록번호")
-    @Column(name = "business_registration_number", nullable = true, length = 20)
+    @Column(
+        name = "business_registration_number", nullable = true, length = 20,
+        comment = "사업자등록번호",
+    )
     var businessRegistrationNumber: String? = null,
 
-    @Comment("업체 연락처")
-    @Column(name = "contact_number", nullable = true, length = 20)
+    @Column(name = "contact_number", nullable = true, length = 20, comment = "업체 연락처")
     var contactNumber: String? = null,
 ) : BaseTimeEntity() {
 

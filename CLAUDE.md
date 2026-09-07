@@ -48,6 +48,12 @@ Boot 4는 기존 단일 `spring-boot-autoconfigure` jar를 기능별 수십 개 
   `actuatorProvider` 빈이 `ManagementServerProperties`(actuator 전용 클래스)를 제네릭 파라미터로
   참조하는 과정에서 `ClassNotFoundException`으로 전체 컨텍스트 기동이 실패함. 테스트(MockMvc)는 이
   프로파일을 안 타서 안 걸리고 실제 `bootRun`에서만 드러남 — actuator 도입 전까지는 `false` 유지
+- `org.hibernate.annotations.Comment`가 Hibernate ORM 7(Boot 4가 쓰는 버전)에서
+  `@Deprecated(since="7")` + `@Remove`(제거 예정 마커)로 지정됨 — Jakarta Persistence 3.2(Jakarta
+  EE 11)에서 `@Column`/`@Table`/`@JoinColumn` 등에 표준 `comment` 속성이 신설되어 Hibernate 전용
+  확장이 더 이상 필요 없어졌기 때문. 전체 엔티티(18개 파일, 106곳)를 `@Comment("...")` +
+  `@Column(...)` 두 줄 조합에서 `@Column(..., comment = "...")` 한 줄로 통합(테이블 레벨은
+  `@Table(..., comment = "...")`)해 import 자체를 제거함
 
 ## 빌드 / 실행
 

@@ -3,7 +3,6 @@ package com.example.springbootkotlinpractice.domain.payment.entity
 import com.example.springbootkotlinpractice.common.entity.BaseTimeEntity
 import com.example.springbootkotlinpractice.enums.PaymentStatus
 import jakarta.persistence.*
-import org.hibernate.annotations.Comment
 import java.time.LocalDateTime
 
 @Entity
@@ -12,36 +11,33 @@ import java.time.LocalDateTime
     uniqueConstraints = [
         UniqueConstraint(name = "uq_payments_01", columnNames = ["order_id"]),
         UniqueConstraint(name = "uq_payments_02", columnNames = ["payment_key"]),
-    ]
+    ],
+    comment = "결제 정보",
 )
-@Comment("결제 정보")
 class Payment(
 
-    @Comment("주문 ID (orders.id)")
-    @Column(name = "order_id", nullable = false, updatable = false)
+    @Column(name = "order_id", nullable = false, updatable = false, comment = "주문 ID (orders.id)")
     val orderId: Long,
 
-    @Comment("Toss Payments 결제 고유 키")
-    @Column(name = "payment_key", nullable = false, updatable = false, length = 200)
+    @Column(
+        name = "payment_key", nullable = false, updatable = false, length = 200,
+        comment = "Toss Payments 결제 고유 키",
+    )
     val paymentKey: String,
 
-    @Comment("결제 금액")
-    @Column(name = "amount", nullable = false, updatable = false)
+    @Column(name = "amount", nullable = false, updatable = false, comment = "결제 금액")
     val amount: Int,
 
     // 이 필드는 항상 cancel()/done() 같은 이름 있는 메서드를 통해서만 변경한다 (status = X 직접 대입 금지).
     // Order.status 와 같은 이유로 컴파일 타임 강제(private/protected set)는 적용하지 않는다.
-    @Comment("결제 상태")
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20, comment = "결제 상태")
     var status: PaymentStatus,
 
-    @Comment("결제 수단 (카드, 가상계좌 등)")
-    @Column(name = "method", nullable = true, length = 30)
+    @Column(name = "method", nullable = true, length = 30, comment = "결제 수단 (카드, 가상계좌 등)")
     val method: String? = null,
 
-    @Comment("결제 승인 일시")
-    @Column(name = "approved_at", nullable = true)
+    @Column(name = "approved_at", nullable = true, comment = "결제 승인 일시")
     val approvedAt: LocalDateTime? = null,
 ) : BaseTimeEntity() {
 

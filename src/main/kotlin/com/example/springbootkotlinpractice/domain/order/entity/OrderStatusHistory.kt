@@ -10,20 +10,16 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
-import org.hibernate.annotations.Comment
 
 @Entity
-@Table(name = "order_status_histories")
-@Comment("주문 상태 변경 이력")
+@Table(name = "order_status_histories", comment = "주문 상태 변경 이력")
 class OrderStatusHistory(
 
-    @Comment("주문 ID (orders.id)")
-    @Column(name = "order_id", nullable = false, updatable = false)
+    @Column(name = "order_id", nullable = false, updatable = false, comment = "주문 ID (orders.id)")
     val orderId: Long,
 
-    @Comment("변경된 주문 상태")
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 30, updatable = false)
+    @Column(name = "status", nullable = false, length = 30, updatable = false, comment = "변경된 주문 상태")
     val status: OrderStatus,
 ) : BaseTimeEntity() {
 
