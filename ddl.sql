@@ -288,9 +288,3 @@ CREATE TABLE vendors
     updated_datetime              DATETIME(6)   NOT NULL
 )
     COMMENT '상품 업체(공급사) 정보';
-
--- 아래는 이미 떠 있는 real DB(local/dev)에 TOTP 2단계 인증 컬럼을 반영하기 위한 1회용 안내문이다.
--- 반영 후 바로 삭제할 것 (히스토리 기록이 아님).
--- ALTER TABLE members ADD COLUMN totp_secret VARCHAR(255) NULL COMMENT 'TOTP 시크릿 키 (AES 암호화 저장, 활성화 시에만 존재)' AFTER role;
--- ALTER TABLE members ADD COLUMN totp_enabled BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'TOTP 2단계 인증 활성화 여부' AFTER totp_secret;
-
