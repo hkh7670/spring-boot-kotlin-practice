@@ -8,6 +8,8 @@ data class OrderDetailResponse(
     val orderUid: String,
     val productTotalPrice: Int,
     val deliveryPrice: Int,
+    val couponDiscountPrice: Int,
+    val pointDiscountPrice: Int,
     val totalPrice: Int,
     val status: OrderStatus,
     @get:JsonProperty("isPaid")

@@ -271,6 +271,42 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 - `CartItemResponse`는 `soldOut` boolean만 노출, 실제 `stockCount`는 응답에 없음(품절 배지 용도로만,
   재고 수량 추측/노출 방지)
 
+## 쿠폰/포인트 (`domain/coupon`, `domain/point`)
+
+3계층 구조로 설계: **템플릿**(`coupons`/`points`, `vendors`처럼 raw `Long` FK로 참조되는 재사용 가능한
+정의) → **발급 인스턴스**(`member_coupons`/`member_points`, 상태가 바뀌는 mutable row) → **사용
+내역**(`member_point_usages`, append-only). 쿠폰은 발급 인스턴스 자체가 사용 여부를 담아 별도 사용
+내역 테이블이 필요 없지만, 포인트는 한 주문에서 여러 적립건에 걸쳐 나눠 차감될 수 있어 "어느 적립건에서
+얼마 썼는지"를 별도로 남겨야 함.
+
+- **쿠폰**: `MemberCoupon.status`(UNUSED/USED/EXPIRED) 하나로 사용 여부를 관리, `orderId`/`usedAt`은
+  사용 시점에만 채워짐. 정액(FIXED)/정률(PERCENTAGE, `maxDiscountPrice` 상한) 두 방식,
+  `minOrderPrice` 미만 주문엔 적용 불가(`Coupon.calculateDiscountPrice()`)
+- **포인트 FIFO 부분차감**: 회원의 `ACTIVE` 상태 `member_points`를 만료 임박 순으로 정렬해 순차
+  차감(`remaining_amount`가 0이 되면 `EXHAUSTED`로 전이), 차감할 때마다 `member_point_usages`에
+  "이 적립건에서 얼마 썼는지" 기록 — 원복 시 이 테이블만 보면 정확히 되돌릴 수 있음
+- **사용 시점 = 주문 생성 시점**: 재고 차감과 동일한 위치·동일한 트랜잭션에서 확정
+  (`OrderService.createOrder()`). 검증(소유자/상태/만료/최소주문금액)은 서비스 레이어에서 먼저
+  거르고, 실제 확정은 `decreaseStock()`/`updateStatusIfCurrent()`와 동일한 **원자적 조건부
+  UPDATE**(`MemberCouponRepository.useIfUnused()`, `MemberPointRepository.deductIfEnough()`)로
+  처리 — 영향 row가 0이면 검증 이후 다른 요청이 먼저 써버렸다는 뜻이라 예외를 던짐. 포인트가 필요액을
+  다 못 채우면 이미 확정된 앞선 적립건 차감분도 같은 트랜잭션이라 자동 롤백됨(별도 보정 로직 불필요)
+- **주문 저장 순서 문제**: 쿠폰/포인트 확정에는 `orderId`가 필요한데 주문을 저장하기 전엔 ID가 없음 →
+  `Order`를 할인 0으로 먼저 저장한 뒤, 쿠폰/포인트를 확정하고 `Order.applyDiscount()`로 할인액을
+  반영(별도 `save()` 없이 dirty checking으로 커밋 시 자동 UPDATE). 그래서 `couponDiscountPrice`/
+  `pointDiscountPrice`는 다른 가격 스냅샷 필드와 달리 `var`(updatable 허용)
+- **원복**: 주문취소(`OrderCancelRecordService`)/반품완료(`OrderReturnRecordService`)/결제실패취소
+  (`PaymentRecordService.cancelOrderAndRestoreStock()`) 3곳 모두 재고 `increaseStock()` 옆에
+  `CouponService.restore(orderId)`/`PointService.restore(orderId)`를 나란히 호출 — 둘 다 이 주문에
+  실제 사용 이력이 없으면 조용히 no-op이라 항상 무조건 호출해도 안전
+  (`restoreIfUsedByOrder()`가 0건 처리, `member_point_usages`가 비어있으면 forEach가 안 돎)
+- 가격 스냅샷 컨벤션 확장: `Order.couponDiscountPrice`/`pointDiscountPrice`를
+  `PaymentService.calculateExpectedAmount()`가 그대로 사용해 "요청 금액 == Toss 승인 금액 == 서버
+  확정 금액" 3자 검증에 자동 반영됨(재계산 없음)
+- 조회 API(둘 다 인증 필요, 결제 화면에서 사용 가능한 쿠폰/포인트를 보여주기 위함):
+  `GET /api/v1/coupons`(미사용·미만료 보유 쿠폰 목록), `GET /api/v1/points`(사용 가능 잔액 합계)
+- 관리자용 발급 API는 아직 없음(향후 과제) — 현재는 `seed-data.sql`로만 시딩
+
 ## Kafka (`domain/order/event`)
 
 `order.paid`/`order.cancelled` 토픽에 발행 (`.env`의 `KAFKA_BOOTSTRAP_SERVERS`).
@@ -309,7 +345,8 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 - **테스트 공백**(향후 보강 필요, 요청 전엔 먼저 손대지 않기): `AuthService` reissue/rotation,
   `AuthEmailController` login/signup, `OrderShippingService`/`OrderReturnService` 전체, `Product`/
   `Category`/`DeliveryOptionController`(신규 조회 API), `OrderController.getOrders()`(목록 API),
-  `CartController`(장바구니 조회/담기/수량변경/삭제) — 전부 구현만 하고 테스트 미작성
+  `CartController`(장바구니 조회/담기/수량변경/삭제), `CouponService`/`PointService`/
+  `CouponController`/`PointController`(쿠폰/포인트 신규 기능 전체) — 전부 구현만 하고 테스트 미작성
 
 ## 배포
 
@@ -323,9 +360,9 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 ## 알려진 이슈 / 향후 과제
 
 - 카테고리 leaf(소분류) 강제 여부 미정 — 위 "상품/카테고리" 섹션 참고
-- 쿠폰/포인트: 아직 미구현. 도입 시 할인은 **주문 생성 시점에 서버가 확정**(`OrderService.createOrder`가
-  쿠폰/포인트를 검증·차감하고 최종 결제금액을 스냅샷 저장)하는 방향으로 설계 — `PaymentService`의
-  "요청 금액 == Toss 승인 금액 == 서버 확정 금액" 3자 일치 검증은 그대로 유지, 느슨하게 풀지 않는다
+- 쿠폰/포인트 관리자용 발급 API 미구현(현재는 `seed-data.sql`로만 시딩) — 위 "쿠폰/포인트" 섹션 참고
+- 할인 적용 후 최종 결제금액이 0원이 되는 경우(Toss 결제 자체를 생략)는 범위 밖 — 현재는
+  `INVALID_DISCOUNT_AMOUNT` 예외로 0원 이하 결제 자체를 차단
 
 ## 관련 프로젝트
 

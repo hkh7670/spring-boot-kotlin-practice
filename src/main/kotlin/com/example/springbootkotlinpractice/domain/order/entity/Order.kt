@@ -38,6 +38,16 @@ class Order(
     @Column(name = "delivery_price", nullable = false, updatable = false)
     val deliveryPrice: Int = 0,
 
+    // 주문 생성 트랜잭션 안에서 쿠폰/포인트 확정 후 applyDiscount()로 채워진다(주문 저장 시점엔
+    // orderId가 없어 쿠폰/포인트 사용 확정을 먼저 할 수 없기 때문 — OrderService.createOrder() 참고)
+    @Comment("쿠폰으로 할인된 금액 (미사용 시 0)")
+    @Column(name = "coupon_discount_price", nullable = false)
+    var couponDiscountPrice: Int = 0,
+
+    @Comment("포인트로 할인된 금액 (미사용 시 0)")
+    @Column(name = "point_discount_price", nullable = false)
+    var pointDiscountPrice: Int = 0,
+
     // Kotlin 문법상 주 생성자 프로퍼티에는 접근자(private/protected set)를 붙일 수 없다. 컴파일 타임으로
     // 강제하진 않되, 이 필드는 항상 markPaid()/markShipping() 같은 이름 있는 메서드를 통해서만 변경한다
     // (status = X 직접 대입 금지). 단, 외부 API(Toss) 성공 이후 반영되는 동시성 민감한 전이(결제확정/
@@ -54,6 +64,13 @@ class Order(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     val id: Long = 0L
+
+    // 주문 생성 시 확정된 쿠폰/포인트 할인액을 반영한다 (OrderService.createOrder() 전용,
+    // 재고차감/쿠폰확정/포인트차감이 모두 성공한 뒤 마지막에 한 번만 호출됨)
+    fun applyDiscount(couponDiscountPrice: Int, pointDiscountPrice: Int) {
+        this.couponDiscountPrice = couponDiscountPrice
+        this.pointDiscountPrice = pointDiscountPrice
+    }
 
     fun markPaid() {
         validatePendingPayment()
@@ -99,7 +116,7 @@ class Order(
             memberId: Long,
             productTotalPrice: Int,
             deliveryOptionId: Long,
-            deliveryPrice: Int
+            deliveryPrice: Int,
         ): Order {
             return Order(
                 memberId = memberId,

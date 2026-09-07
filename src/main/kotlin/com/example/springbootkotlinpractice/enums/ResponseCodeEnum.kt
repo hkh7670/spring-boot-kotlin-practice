@@ -39,6 +39,12 @@ enum class ResponseCodeEnum(
     NOT_FOUND_TOTP_ENROLLMENT(HttpStatus.NOT_FOUND, "1023", "TOTP 등록 요청 정보가 존재하지 않습니다. 등록을 다시 시작해주세요."),
     TOTP_ALREADY_ENABLED(HttpStatus.CONFLICT, "1024", "이미 TOTP 2단계 인증이 활성화되어 있습니다."),
     TOTP_NOT_ENABLED(HttpStatus.CONFLICT, "1025", "TOTP 2단계 인증이 활성화되어 있지 않습니다."),
+    NOT_FOUND_MEMBER_COUPON(HttpStatus.NOT_FOUND, "1026", "보유한 쿠폰 정보가 존재하지 않습니다."),
+    ALREADY_USED_COUPON(HttpStatus.CONFLICT, "1027", "이미 사용되었거나 사용할 수 없는 쿠폰입니다."),
+    EXPIRED_COUPON(HttpStatus.BAD_REQUEST, "1028", "유효기간이 지난 쿠폰입니다."),
+    MIN_ORDER_PRICE_NOT_MET(HttpStatus.BAD_REQUEST, "1029", "쿠폰 적용을 위한 최소 주문 금액을 충족하지 않았습니다."),
+    NOT_ENOUGH_POINT(HttpStatus.CONFLICT, "1030", "사용 가능한 포인트가 부족합니다."),
+    INVALID_DISCOUNT_AMOUNT(HttpStatus.BAD_REQUEST, "1031", "할인 적용 후 결제 금액이 0원 이하가 될 수 없습니다."),
 
     // Auth Error (4000 ~)
     INVALID_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "4000", "유효하지 않은 JWT Token 입니다."),

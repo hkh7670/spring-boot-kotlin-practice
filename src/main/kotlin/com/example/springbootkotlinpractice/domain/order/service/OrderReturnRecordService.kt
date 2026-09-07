@@ -1,11 +1,13 @@
 package com.example.springbootkotlinpractice.domain.order.service
 
+import com.example.springbootkotlinpractice.domain.coupon.service.CouponService
 import com.example.springbootkotlinpractice.domain.order.dto.OrderStatusResponse
 import com.example.springbootkotlinpractice.domain.order.entity.OrderStatusHistory
 import com.example.springbootkotlinpractice.domain.order.repository.OrderItemRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderStatusHistoryRepository
 import com.example.springbootkotlinpractice.domain.payment.repository.PaymentRepository
+import com.example.springbootkotlinpractice.domain.point.service.PointService
 import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
 import com.example.springbootkotlinpractice.enums.OrderStatus
 import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
@@ -23,6 +25,8 @@ class OrderReturnRecordService(
     private val orderStatusHistoryRepository: OrderStatusHistoryRepository,
     private val paymentRepository: PaymentRepository,
     private val productOptionRepository: ProductOptionRepository,
+    private val couponService: CouponService,
+    private val pointService: PointService,
 ) {
 
     @Transactional
@@ -46,6 +50,8 @@ class OrderReturnRecordService(
         orderItemRepository.findByOrder(order).forEach {
             productOptionRepository.increaseStock(it.productOption.id, it.count)
         }
+        couponService.restore(order.id)
+        pointService.restore(order.id)
 
         return OrderStatusResponse(orderId = order.id, orderUid = order.orderUid, status = OrderStatus.RETURNED)
     }

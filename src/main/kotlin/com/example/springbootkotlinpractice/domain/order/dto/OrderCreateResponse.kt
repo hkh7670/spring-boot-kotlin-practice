@@ -5,5 +5,7 @@ data class OrderCreateResponse(
     val orderUid: String,
     val productTotalPrice: Int,
     val deliveryPrice: Int,
+    val couponDiscountPrice: Int,
+    val pointDiscountPrice: Int,
     val totalPrice: Int,
 )

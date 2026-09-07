@@ -62,7 +62,7 @@ class PaymentService(
     }
 
     private fun calculateExpectedAmount(order: Order): Int {
-        return order.productTotalPrice + order.deliveryPrice
+        return order.productTotalPrice + order.deliveryPrice - order.couponDiscountPrice - order.pointDiscountPrice
     }
 
     private fun validateAmount(expectedAmount: Int, actualAmount: Int) {

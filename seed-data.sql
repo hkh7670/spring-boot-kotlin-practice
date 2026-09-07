@@ -104,3 +104,27 @@ VALUES ((SELECT id FROM products WHERE name = '울트라 노트북 14인치'), '
        ((SELECT id FROM products WHERE name = '초코 쿠키 박스'), '기본', 8900, 80, NOW(), NOW()),
        ((SELECT id FROM products WHERE name = '제로 탄산음료 24캔'), '기본', 15900, 70, NOW(), NOW()),
        ((SELECT id FROM products WHERE name = '콜드브루 원액 스틱'), '기본', 12900, 90, NOW(), NOW());
+
+-- 쿠폰/포인트 템플릿
+INSERT INTO coupons (name, discount_type, discount_value, max_discount_price, min_order_price, valid_until, created_datetime, updated_datetime)
+VALUES ('신규가입 5천원 할인', 'FIXED', 5000, NULL, 30000, DATE_ADD(NOW(), INTERVAL 1 YEAR), NOW(), NOW()),
+       ('전상품 10% 할인', 'PERCENTAGE', 10, 10000, 0, DATE_ADD(NOW(), INTERVAL 1 YEAR), NOW(), NOW());
+
+INSERT INTO points (name, valid_days, created_datetime, updated_datetime)
+VALUES ('이벤트 지급', 365, NOW(), NOW());
+
+-- 회원가입 API로 생성된 첫 번째 회원에게 데모용으로 쿠폰 2종 + 포인트 5000P를 발급한다.
+-- 아직 가입한 회원이 없으면(최초 DB 구축 직후) 이 INSERT들은 조용히 0건 처리된다 — 회원가입 후
+-- seed-data.sql만 다시 이 블록부터 재실행하면 됨(재실행 시 중복 insert되므로 한 번만 실행할 것).
+INSERT INTO member_coupons (member_id, coupon_id, status, issued_at, expired_at, created_datetime, updated_datetime)
+SELECT (SELECT id FROM members ORDER BY id LIMIT 1), c.id, 'UNUSED', NOW(), c.valid_until, NOW(), NOW()
+FROM coupons c
+WHERE EXISTS (SELECT 1 FROM members)
+  AND c.name IN ('신규가입 5천원 할인', '전상품 10% 할인');
+
+INSERT INTO member_points (member_id, point_id, amount, remaining_amount, status, issued_at, expired_at, created_datetime, updated_datetime)
+SELECT (SELECT id FROM members ORDER BY id LIMIT 1), p.id, 5000, 5000, 'ACTIVE', NOW(),
+       DATE_ADD(NOW(), INTERVAL p.valid_days DAY), NOW(), NOW()
+FROM points p
+WHERE EXISTS (SELECT 1 FROM members)
+  AND p.name = '이벤트 지급';

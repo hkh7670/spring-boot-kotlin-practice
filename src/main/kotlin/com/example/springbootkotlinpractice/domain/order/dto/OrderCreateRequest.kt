@@ -15,6 +15,12 @@ data class OrderCreateRequest(
     @field:NotEmpty
     @field:Valid
     val items: List<OrderItemRequest>,
+
+    @field:Schema(description = "사용할 보유 쿠폰 ID (member_coupons.id, 미사용 시 null)", example = "1", nullable = true)
+    val memberCouponId: Long? = null,
+
+    @field:Schema(description = "사용할 포인트 금액 (미사용 시 0)", example = "1000")
+    val usePointAmount: Int = 0,
 )
 
 data class OrderItemRequest(

@@ -1,6 +1,7 @@
 package com.example.springbootkotlinpractice.domain.order.service
 
 import com.example.springbootkotlinpractice.common.dto.PageResponse
+import com.example.springbootkotlinpractice.domain.coupon.service.CouponService
 import com.example.springbootkotlinpractice.domain.delivery.entity.DeliveryOption
 import com.example.springbootkotlinpractice.domain.delivery.repository.DeliveryOptionRepository
 import com.example.springbootkotlinpractice.domain.order.dto.OrderCreateRequest
@@ -14,6 +15,7 @@ import com.example.springbootkotlinpractice.domain.order.entity.OrderStatusHisto
 import com.example.springbootkotlinpractice.domain.order.repository.OrderItemRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderRepository
 import com.example.springbootkotlinpractice.domain.order.repository.OrderStatusHistoryRepository
+import com.example.springbootkotlinpractice.domain.point.service.PointService
 import com.example.springbootkotlinpractice.domain.product.entity.ProductOption
 import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
 import com.example.springbootkotlinpractice.enums.OrderStatus
@@ -31,6 +33,8 @@ class OrderService(
     private val orderStatusHistoryRepository: OrderStatusHistoryRepository,
     private val productOptionRepository: ProductOptionRepository,
     private val deliveryOptionRepository: DeliveryOptionRepository,
+    private val couponService: CouponService,
+    private val pointService: PointService,
 ) {
 
     @Transactional
@@ -47,6 +51,8 @@ class OrderService(
 
         val productTotalPrice = orderItems.sumOf { (productOption, count) -> productOption.price * count }
 
+        // 쿠폰/포인트 사용 확정에는 orderId가 필요해 주문을 먼저 저장한다(할인액은 아직 0).
+        // 검증 실패 시 여기까지의 재고차감/주문저장도 같은 트랜잭션이라 함께 롤백된다
         val savedOrder = orderRepository.save(
             Order.of(
                 memberId = memberId,
@@ -55,6 +61,21 @@ class OrderService(
                 deliveryPrice = deliveryOption.price,
             )
         )
+
+        val couponDiscountPrice = request.memberCouponId?.let {
+            couponService.use(memberId, it, savedOrder.id, productTotalPrice)
+        } ?: 0
+        val pointDiscountPrice = if (request.usePointAmount > 0) {
+            pointService.use(memberId, savedOrder.id, request.usePointAmount)
+        } else {
+            0
+        }
+
+        val totalPrice = productTotalPrice + deliveryOption.price - couponDiscountPrice - pointDiscountPrice
+        if (totalPrice <= 0) {
+            throw ApiErrorException(ResponseCodeEnum.INVALID_DISCOUNT_AMOUNT)
+        }
+        savedOrder.applyDiscount(couponDiscountPrice, pointDiscountPrice)
 
         orderItemRepository.saveAll(
             orderItems.map { (productOption, count) ->
@@ -74,7 +95,9 @@ class OrderService(
             orderUid = savedOrder.orderUid,
             productTotalPrice = productTotalPrice,
             deliveryPrice = deliveryOption.price,
-            totalPrice = productTotalPrice + deliveryOption.price,
+            couponDiscountPrice = couponDiscountPrice,
+            pointDiscountPrice = pointDiscountPrice,
+            totalPrice = totalPrice,
         )
     }
 
@@ -88,7 +111,9 @@ class OrderService(
             orderUid = order.orderUid,
             productTotalPrice = order.productTotalPrice,
             deliveryPrice = order.deliveryPrice,
-            totalPrice = order.productTotalPrice + order.deliveryPrice,
+            couponDiscountPrice = order.couponDiscountPrice,
+            pointDiscountPrice = order.pointDiscountPrice,
+            totalPrice = order.productTotalPrice + order.deliveryPrice - order.couponDiscountPrice - order.pointDiscountPrice,
             status = order.status,
             isPaid = order.status == OrderStatus.PAID,
             itemList = orderItems.map {
@@ -117,7 +142,7 @@ class OrderService(
                     orderId = order.id,
                     orderUid = order.orderUid,
                     status = order.status,
-                    totalPrice = order.productTotalPrice + order.deliveryPrice,
+                    totalPrice = order.productTotalPrice + order.deliveryPrice - order.couponDiscountPrice - order.pointDiscountPrice,
                     representativeProductName = items.firstOrNull()?.productOption?.product?.name.orEmpty(),
                     itemCount = items.size,
                 )

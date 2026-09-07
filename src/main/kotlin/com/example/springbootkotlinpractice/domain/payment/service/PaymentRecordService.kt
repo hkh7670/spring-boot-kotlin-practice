@@ -1,6 +1,7 @@
 package com.example.springbootkotlinpractice.domain.payment.service
 
 import com.example.springbootkotlinpractice.common.payment.toss.TossConfirmPaymentResponse
+import com.example.springbootkotlinpractice.domain.coupon.service.CouponService
 import com.example.springbootkotlinpractice.domain.order.entity.OrderStatusHistory
 import com.example.springbootkotlinpractice.domain.order.event.OrderCancelledEvent
 import com.example.springbootkotlinpractice.domain.order.event.OrderPaidEvent
@@ -10,6 +11,7 @@ import com.example.springbootkotlinpractice.domain.order.repository.OrderStatusH
 import com.example.springbootkotlinpractice.domain.payment.dto.PaymentConfirmResponse
 import com.example.springbootkotlinpractice.domain.payment.entity.Payment
 import com.example.springbootkotlinpractice.domain.payment.repository.PaymentRepository
+import com.example.springbootkotlinpractice.domain.point.service.PointService
 import com.example.springbootkotlinpractice.domain.product.repository.ProductOptionRepository
 import com.example.springbootkotlinpractice.enums.OrderStatus
 import com.example.springbootkotlinpractice.enums.PaymentStatus
@@ -31,6 +33,8 @@ class PaymentRecordService(
     private val paymentRepository: PaymentRepository,
     private val productOptionRepository: ProductOptionRepository,
     private val applicationEventPublisher: ApplicationEventPublisher,
+    private val couponService: CouponService,
+    private val pointService: PointService,
 ) {
 
     @Transactional
@@ -102,6 +106,8 @@ class PaymentRecordService(
         orderItemRepository.findByOrder(order).forEach {
             productOptionRepository.increaseStock(it.productOption.id, it.count)
         }
+        couponService.restore(order.id)
+        pointService.restore(order.id)
 
         applicationEventPublisher.publishEvent(
             OrderCancelledEvent(
