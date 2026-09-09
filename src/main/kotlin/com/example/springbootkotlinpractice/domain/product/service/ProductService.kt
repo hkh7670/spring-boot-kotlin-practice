@@ -16,7 +16,6 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.util.CollectionUtils
 
 @Service
 class ProductService(
@@ -74,14 +73,14 @@ class ProductService(
 
     private fun findVendorNameMap(products: List<Product>): Map<Long, String> {
         val vendorIds = products.mapNotNull { it.vendorId }.distinct()
-        if (CollectionUtils.isEmpty(vendorIds)) {
+        if (vendorIds.isEmpty()) {
             return emptyMap()
         }
         return vendorRepository.findAllById(vendorIds).associateBy({ it.id }, { it.name })
     }
 
     private fun findAggregateMap(products: List<Product>): Map<Long, ProductOptionAggregate> {
-        if (CollectionUtils.isEmpty(products)) {
+        if (products.isEmpty()) {
             return emptyMap()
         }
         return productOptionRepository.findAggregatesByProductIdIn(products.map { it.id })

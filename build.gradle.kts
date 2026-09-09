@@ -86,6 +86,10 @@ dependencies {
     /* TOTP (2단계 인증, RFC 6238) */
     implementation("dev.samstevens.totp:totp:1.7.1")
 
+    /* OpenSearch (상품명 자동완성) — 트랜스포트는 내장 ApacheHttpClient5TransportBuilder가
+       위 httpclient5 의존성을 그대로 사용하므로 별도 transport 아티팩트 불필요 */
+    implementation("org.opensearch.client:opensearch-java:3.9.0")
+
     /* Kotlin Logging */
 //    runtimeOnly("io.github.oshai:kotlin-logging-jvm:8.0.4")
 }

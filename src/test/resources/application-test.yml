@@ -88,6 +88,11 @@ redis:
   port: 6379
   password: test-redis-password
 
+opensearch:
+  host: localhost
+  port: 9200
+  scheme: http
+
 app:
   oauth:
     frontend-success-redirect-uri: http://localhost:8080/oauth/complete

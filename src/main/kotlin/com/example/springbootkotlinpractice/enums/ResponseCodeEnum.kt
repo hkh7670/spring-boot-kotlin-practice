@@ -70,6 +70,7 @@ enum class ResponseCodeEnum(
         "9001",
         "사용 가능한 Watch ID 시퀀스가 존재하지 않습니다. 관리자에게 문의해주세요.",
     ),
+    SEARCH_ENGINE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "9002", "검색엔진 연동 중 오류가 발생했습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "9998", "내부 서버 오류 입니다. 관리자에게 문의해주세요."),
     EXTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "9999", "외부 서버 오류 입니다. 관리자에게 문의해주세요."),
     ;

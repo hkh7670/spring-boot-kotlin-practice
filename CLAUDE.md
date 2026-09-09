@@ -111,7 +111,9 @@ Entity를 API 응답에 직접 노출 안 함(DTO 변환).
 - FK 컬럼/필드명: `참조테이블명(단수) + _id`
 - Spring Data 파생 쿼리 메서드명: **DB 컬럼명이 아니라 Kotlin 프로퍼티 경로**와 일치 필수 (틀리면
   `PropertyReferenceException`으로 컨텍스트 기동 자체가 실패 → `@SpringBootTest` 전체 도미노 실패)
-- null/empty 체크: `CollectionUtils.isEmpty()`/`StringUtils.hasText()` 사용, `!!` 금지
+- null/empty 체크: Kotlin 표준 `isNullOrBlank()`/`isNullOrEmpty()`(nullable),
+  `isBlank()`/`isEmpty()`(non-null) 사용 — `StringUtils.hasText()`/`CollectionUtils.isEmpty()`
+  (spring-core)는 Java 인터롭용이라 순수 Kotlin 코드에선 쓰지 않는다. `!!` 금지
 - 상태값(`Order.status`, `Payment.status`): 평범한 public `var`(Kotlin 주 생성자 프로퍼티는 커스텀
   접근자를 문법적으로 못 붙임) — 대신 항상 이름 있는 메서드(`markPaid()`, `markShipping()`, `cancel()`
   등)로만 변경. 단, 외부 API(Toss) 성공 후 반영되는 동시성 민감 전이(결제확정/주문취소/반품완료)는

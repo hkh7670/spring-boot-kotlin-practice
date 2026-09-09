@@ -12,7 +12,6 @@ import com.example.springbootkotlinpractice.enums.ResponseCodeEnum
 import com.example.springbootkotlinpractice.exception.ApiErrorException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.util.CollectionUtils
 
 @Service
 class CartService(
@@ -56,7 +55,7 @@ class CartService(
     @Transactional(readOnly = true)
     fun getCart(memberId: Long): CartResponse {
         val cartItems = cartItemRepository.findByMemberId(memberId)
-        if (CollectionUtils.isEmpty(cartItems)) {
+        if (cartItems.isEmpty()) {
             return CartResponse(items = emptyList())
         }
 

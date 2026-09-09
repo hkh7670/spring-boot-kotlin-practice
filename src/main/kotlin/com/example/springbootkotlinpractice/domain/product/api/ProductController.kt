@@ -6,6 +6,8 @@ import com.example.springbootkotlinpractice.common.dto.ResponseHandler
 import com.example.springbootkotlinpractice.domain.product.dto.ProductDetailResponse
 import com.example.springbootkotlinpractice.domain.product.dto.ProductSummaryResponse
 import com.example.springbootkotlinpractice.domain.product.service.ProductService
+import com.example.springbootkotlinpractice.domain.search.dto.ProductAutocompleteResponse
+import com.example.springbootkotlinpractice.domain.search.service.ProductSearchService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.data.domain.PageRequest
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class ProductController(
     private val productService: ProductService,
+    private val productSearchService: ProductSearchService,
 ) {
 
     @Operation(
@@ -36,6 +39,18 @@ class ProductController(
     ): ResponseEntity<CommonResponse<PageResponse<ProductSummaryResponse>>> {
         val response = productService.getProducts(categoryId, keyword, PageRequest.of(page, size))
         return ResponseHandler.ok(response)
+    }
+
+    @Operation(
+        summary = "상품명 자동완성 API",
+        description = "OpenSearch Completion Suggester 기반 상품명 추천어를 조회한다.",
+    )
+    @GetMapping("/autocomplete")
+    fun autocomplete(
+        @RequestParam keyword: String,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<CommonResponse<List<ProductAutocompleteResponse>>> {
+        return ResponseHandler.ok(productSearchService.autocomplete(keyword, size))
     }
 
     @Operation(
