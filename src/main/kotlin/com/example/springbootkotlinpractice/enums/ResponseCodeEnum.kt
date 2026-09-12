@@ -45,6 +45,7 @@ enum class ResponseCodeEnum(
     MIN_ORDER_PRICE_NOT_MET(HttpStatus.BAD_REQUEST, "1029", "쿠폰 적용을 위한 최소 주문 금액을 충족하지 않았습니다."),
     NOT_ENOUGH_POINT(HttpStatus.CONFLICT, "1030", "사용 가능한 포인트가 부족합니다."),
     INVALID_DISCOUNT_AMOUNT(HttpStatus.BAD_REQUEST, "1031", "할인 적용 후 결제 금액이 0원 이하가 될 수 없습니다."),
+    ADMIN_LOGIN_NOT_ALLOWED(HttpStatus.FORBIDDEN, "1032", "비활성 또는 탈퇴한 관리자는 로그인할 수 없습니다."),
 
     // Auth Error (4000 ~)
     INVALID_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "4000", "유효하지 않은 JWT Token 입니다."),

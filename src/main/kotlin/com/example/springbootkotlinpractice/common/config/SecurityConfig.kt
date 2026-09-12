@@ -48,6 +48,7 @@ class SecurityConfig(
             "/api/v1/auth/reissue",
             "/api/v1/auth/totp/login",
             "/api/v1/admin/accounts",
+            "/api/v1/admin/auth/login",
             "/api/v1/products/**",
             "/api/v1/categories/**",
             "/api/v1/delivery-options/**",

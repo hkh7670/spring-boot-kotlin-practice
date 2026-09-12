@@ -46,6 +46,19 @@ class JwtTokenProvider(
         )
     }
 
+    // Admin은 Role enum(Member 전용)과 무관하므로 리터럴 "ADMIN" 문자열을 role 클레임에 직접 싣는다.
+    fun createAdminAccessToken(adminId: Long): String {
+        return buildToken(
+            memberId = adminId,
+            validityMs = jwtProperties.accessTokenValidityMs,
+            extraClaims = JwtTokenClaims.of(
+                id = adminId,
+                tokenType = TokenType.ACCESS_TOKEN,
+                role = ADMIN_ROLE_CLAIM,
+            ).toMap()
+        )
+    }
+
     fun createTempToken(providerId: String, provider: JoinProvider, email: String?, nickname: String?): String {
         val now = System.currentTimeMillis()
         return Jwts.builder()
@@ -89,8 +102,8 @@ class JwtTokenProvider(
         return parse(token).subject.toLong()
     }
 
-    fun getRole(token: String): Role {
-        return Role.valueOf(parse(token)["role"].toString())
+    fun getRoleClaim(token: String): String {
+        return parse(token)["role"].toString()
     }
 
     fun getTokenType(token: String): TokenType {
@@ -118,4 +131,8 @@ class JwtTokenProvider(
             .build()
             .parseSignedClaims(token)
             .payload
+
+    companion object {
+        private const val ADMIN_ROLE_CLAIM = "ADMIN"
+    }
 }

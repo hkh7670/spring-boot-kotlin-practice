@@ -9,7 +9,7 @@ data class JwtTokenClaims(
     private val tokenType: TokenType,
     private val email: String? = null,
     private val provider: JoinProvider? = null,
-    private val role: Role? = null,
+    private val role: String? = null,
 ) {
     companion object {
         fun of(
@@ -24,7 +24,7 @@ data class JwtTokenClaims(
                 email = email,
                 tokenType = tokenType,
                 provider = provider,
-                role = role,
+                role = role.name,
             )
         }
 
@@ -32,6 +32,15 @@ data class JwtTokenClaims(
             return JwtTokenClaims(
                 memberId = id,
                 tokenType = tokenType,
+            )
+        }
+
+        // Admin은 Role enum(Member 전용)과 무관하게 리터럴 권한 문자열을 그대로 클레임에 싣는다.
+        fun of(id: Long, tokenType: TokenType, role: String): JwtTokenClaims {
+            return JwtTokenClaims(
+                memberId = id,
+                tokenType = tokenType,
+                role = role,
             )
         }
     }

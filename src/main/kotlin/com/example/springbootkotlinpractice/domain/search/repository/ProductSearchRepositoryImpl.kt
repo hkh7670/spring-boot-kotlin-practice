@@ -14,7 +14,8 @@ class ProductSearchRepositoryImpl(
 ) : ProductSearchRepository, Logging {
 
     override fun ensureIndexExists() {
-        val exists = openSearchClient.indices().exists { it.index(ProductDocument.INDEX_NAME) }.value()
+        val exists =
+            openSearchClient.indices().exists { it.index(ProductDocument.INDEX_NAME) }.value()
         if (exists) return
 
         val mapper = openSearchClient._transport().jsonpMapper()
@@ -41,7 +42,13 @@ class ProductSearchRepositoryImpl(
         // 개별 실패 항목은 로그만 남기고 계속 진행 — 관리자가 재실행 가능한 멱등 작업이므로 전체 중단 안 함
         if (response.errors()) {
             response.items().filter { it.error() != null }
-                .forEach { item -> logger.error("상품 색인 실패 productId=${item.id()}: ${item.error()?.reason()}") }
+                .forEach { item ->
+                    logger.error(
+                        "상품 색인 실패 productId=${item.id()}: ${
+                            item.error()?.reason()
+                        }"
+                    )
+                }
         }
         return response.items().count { it.error() == null }
     }
