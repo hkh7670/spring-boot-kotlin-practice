@@ -97,8 +97,8 @@ redis:
   password: ${REDIS_PASSWORD}
 
 opensearch:
-  host: localhost
-  port: 9200
+  host: ${OPENSEARCH_URL}
+  port: ${OPENSEARCH_PORT}
   scheme: http
 
 app:
