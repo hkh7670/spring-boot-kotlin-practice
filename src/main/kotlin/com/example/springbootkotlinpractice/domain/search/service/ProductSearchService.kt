@@ -1,6 +1,7 @@
 package com.example.springbootkotlinpractice.domain.search.service
 
 import com.example.springbootkotlinpractice.common.Logging
+import com.example.springbootkotlinpractice.domain.product.entity.Product
 import com.example.springbootkotlinpractice.domain.product.repository.ProductRepository
 import com.example.springbootkotlinpractice.domain.search.document.ProductDocument
 import com.example.springbootkotlinpractice.domain.search.dto.ProductAutocompleteResponse
@@ -28,16 +29,50 @@ class ProductSearchService(
             var page = 0
             var totalIndexed = 0
             while (true) {
-                val chunk = productRepository.findAll(PageRequest.of(page, batchSize))
+                val chunk = productRepository.findAllByIsDeletedFalse(PageRequest.of(page, batchSize))
                 if (chunk.isEmpty) break
                 totalIndexed += productSearchRepository.bulkIndex(chunk.content.map { ProductDocument.of(it) })
                 if (!chunk.hasNext()) break
                 page++
             }
+            removeDeletedProductsFromIndex()
             return ReindexResponse(indexedCount = totalIndexed)
         } catch (e: Exception) {
             logger.error("상품 재색인 실패", e)
             throw ApiErrorException(ResponseCodeEnum.SEARCH_ENGINE_ERROR)
+        }
+    }
+
+    // soft delete된 상품 문서를 인덱스에서 정리한다. 단건 삭제(removeProduct)가 실패해 남은 문서를
+    // 재색인으로 복구할 수 있게 하는 부분이다.
+    private fun removeDeletedProductsFromIndex() {
+        var page = 0
+        while (true) {
+            val chunk = productRepository.findAllByIsDeletedTrue(PageRequest.of(page, batchSize))
+            if (chunk.isEmpty) break
+            productSearchRepository.bulkDelete(chunk.content.map { it.id })
+            if (!chunk.hasNext()) break
+            page++
+        }
+    }
+
+    // 관리자 상품 생성/수정을 색인에 반영한다. 이미 커밋된 상품 API를 색인 실패로 깨뜨리면 안 되므로
+    // 로그만 남기고, 누락분은 관리자 재색인으로 복구한다. 인덱스가 없을 때 동적 매핑으로 자동 생성되어
+    // completion 매핑이 깨지는 것을 막으려고 색인 전에 인덱스 존재를 보장한다.
+    fun indexProduct(product: Product) {
+        try {
+            productSearchRepository.ensureIndexExists()
+            productSearchRepository.index(ProductDocument.of(product))
+        } catch (e: Exception) {
+            logger.warn("상품 색인 갱신 실패, 재색인으로 복구 필요: productId=${product.id}", e)
+        }
+    }
+
+    fun removeProduct(productId: Long) {
+        try {
+            productSearchRepository.delete(productId)
+        } catch (e: Exception) {
+            logger.warn("상품 색인 삭제 실패, 재색인으로 복구 필요: productId=$productId", e)
         }
     }
 

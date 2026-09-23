@@ -313,7 +313,49 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
   확정 금액" 3자 검증에 자동 반영됨(재계산 없음)
 - 조회 API(둘 다 인증 필요, 결제 화면에서 사용 가능한 쿠폰/포인트를 보여주기 위함):
   `GET /api/v1/coupons`(미사용·미만료 보유 쿠폰 목록), `GET /api/v1/points`(사용 가능 잔액 합계)
-- 관리자용 발급 API는 아직 없음(향후 과제) — 현재는 `seed-data.sql`로만 시딩
+- 관리자용 템플릿 CRUD와 회원 지정 발급/적립 API는 아래 "관리자 상품/쿠폰/포인트 API" 절 참고
+
+## 관리자 상품/쿠폰/포인트 API (`/api/v1/admin/**`)
+
+`AdminProductController`/`AdminCouponController`/`AdminPointController`. 메서드마다
+`@PreAuthorize("hasRole('ADMIN')")`를 붙이고(`AdminOrderController` 패턴) `PERMIT_ALL`에는 넣지 않는다.
+관리자 토큰의 `UserPrincipal.id`는 `members.id`가 아니라 `admins.id`이므로 발급/적립 대상 회원 ID와
+섞지 말 것.
+
+- **soft delete**: `products`/`coupons`/`points`의 `is_deleted TINYINT(1)` 컬럼과 엔티티의
+  `var isDeleted: Boolean` 프로퍼티(Spring Data 파생 쿼리는 `findByIdAndIsDeletedFalse` 형태, JPQL/QueryDSL
+  경로도 `isDeleted`). allopen 때문에 `private set`을 못 써서 평범한 `var` + `delete()` 메서드로만 바꾼다
+- `@SQLRestriction`은 의도적으로 안 쓴다 — `OrderItem.productOption`(LAZY)이 삭제된 상품도 그대로
+  로딩해야 과거 주문 조회가 안 깨지기 때문. 대신 공개 경로에서 명시적으로 걸러낸다:
+  `ProductRepositoryImpl.search()`, `ProductService.getProduct()`,
+  `ProductOptionRepository.findByIdFetchProduct`/`findByIdInFetchProduct`(주문 생성/장바구니가 삭제 상품을
+  거부), `ProductSearchService.reindexAll()`. 재고 복구(`increaseStock`)는 id 기반 UPDATE라 삭제된 상품의
+  주문 취소/반품에서도 정상 동작
+- 쿠폰/포인트 템플릿 삭제는 "신규 발급/적립 중단"만 의미한다. 이미 발급된 쿠폰과 적립된 포인트는 만료일까지
+  유효(`CouponService.use()`의 템플릿 조회에는 삭제 필터가 없음)
+- 수정 API는 `PATCH`이되 수정 가능한 필드 전체를 교체하는 의미다(CORS가 PUT을 허용하지 않고, 필드 생략과
+  null 지정의 구분을 피하려고)
+- **상품**: 옵션 개별 삭제 API는 없다(`UNIQUE(product_id, name)`이 삭제된 옵션명 재사용을 막고 옵션은 과거
+  주문이 참조) → 재고 0으로 품절 처리. 옵션명은 trim 후 대소문자 무시로 중복 검사하고, 동시 요청이
+  `uq_product_options_01`에 걸리면 500이 아닌 409로 변환한다
+- 옵션 수정(`AdminProductOptionUpdateRequest`)의 재고는 선택값이다. `null`이면 건드리지 않고
+  (`ProductOption`의 `@DynamicUpdate`가 오래된 `stock_count`로 동시 주문의 원자적 차감을 덮어쓰는 것을 막음),
+  값을 보내면 절대값으로 덮어써서 조회 이후의 주문 차감분이 사라질 수 있다. 재고 조정 API가 필요하면 증감
+  (delta) 방식으로 따로 만들 것
+- **입력 상한**: 옵션 가격 1억/재고 100만/옵션 50개, 상품 설명 1만자, 쿠폰 할인값·최대 할인 1천만/최소 주문
+  1억, 포인트 적립 1천만/유효 일수 3650일, 발급·적립 대상 100명, 목록 `size` 100. 쿠폰 발급과 포인트
+  적립은 관리자 ID와 대상을 `[ADMIN] ...` 감사 로그로 남긴다
+- 상품 생성/수정/삭제는 `AdminProductService`(트랜잭션 없음)가 `AdminProductRecordService`(DB 쓰기)를 커밋한
+  뒤 OpenSearch 단건 색인/삭제(`ProductSearchService.indexProduct`/`removeProduct`)를 수행한다. 색인 실패는
+  로그만 남기고 API는 성공시키며, 누락분은 `POST /api/v1/admin/products/reindex`로 복구한다(재색인은 삭제되지
+  않은 상품을 색인하고 삭제된 상품 문서는 인덱스에서 정리한다)
+- **쿠폰**: 할인 방식/마감 일시는 수정 불가. 발급 이력이 있으면 이름 외 조건 수정은
+  `COUPON_ALREADY_ISSUED`(사용 시점에 템플릿을 실시간 조회하므로 이미 받은 고객의 혜택이 바뀌기 때문).
+  발급은 회원당 템플릿별 1회(`member_coupons (member_id, coupon_id)` 유니크 + 사전 검증)이고, `memberIds`
+  1~100명 전부 성공하거나 전부 실패한다
+- **포인트**: 적립 시 `expiredAt = now + validDays`가 `member_points`에 고정되므로 템플릿 수정은 기존
+  적립분에 영향이 없다. 같은 회원에게 중복 적립은 허용
+- 쿠폰 발급 취소/포인트 회수는 아직 없다
 
 ## Kafka (`domain/order/event`)
 
@@ -354,7 +396,10 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
   `AuthEmailController` login/signup, `OrderShippingService`/`OrderReturnService` 전체, `Product`/
   `Category`/`DeliveryOptionController`(신규 조회 API), `OrderController.getOrders()`(목록 API),
   `CartController`(장바구니 조회/담기/수량변경/삭제), `CouponService`/`PointService`/
-  `CouponController`/`PointController`(쿠폰/포인트 신규 기능 전체) — 전부 구현만 하고 테스트 미작성
+  `CouponController`/`PointController`(회원용 쿠폰/포인트 조회와 주문 시 사용/원복) — 전부 구현만 하고
+  테스트 미작성. 관리자 상품/쿠폰/포인트 API와 상품 soft delete의 공개 API 반영은
+  `AdminProductControllerTest`/`AdminCouponControllerTest`/`AdminPointControllerTest`/
+  `ProductSoftDeleteTest`로 커버됨
 
 ## 배포
 
@@ -368,7 +413,16 @@ PENDING_PAYMENT → PAID → SHIPPING → DELIVERED → RETURNING → RETURNED
 ## 알려진 이슈 / 향후 과제
 
 - 카테고리 leaf(소분류) 강제 여부 미정 — 위 "상품/카테고리" 섹션 참고
-- 쿠폰/포인트 관리자용 발급 API 미구현(현재는 `seed-data.sql`로만 시딩) — 위 "쿠폰/포인트" 섹션 참고
+- 쿠폰 발급 취소/포인트 회수 API 미구현, 포인트 적립은 멱등 키가 없어 재시도 시 이중 적립 — 위 "관리자
+  상품/쿠폰/포인트 API" 절 참고
+- `OrderService.createOrder()`의 상품 금액 합계(`price * count`)가 `Int` 연산이라 합계가 약 21억을 넘으면
+  오버플로로 래핑된다. 관리자 API로 고가/대량 재고 옵션을 등록할 수 있게 되어 노출 위험이 커졌으므로 `Long`
+  계산 후 상한 검증이 필요하다(옵션 가격/재고 상한만으로는 막을 수 없음)
+- 관리자 액세스 토큰은 계정이 비활성/탈퇴로 바뀌어도 만료(30분)까지 유효하다(`JwtAuthenticationFilter`가
+  관리자 상태를 다시 확인하지 않음)
+- `POST /api/v1/admin/accounts`(관리자 계정 생성)가 인증 없이 열려 있음(`SecurityConfig` PERMIT_ALL) — 누구나
+  관리자 계정을 만들어 로그인할 수 있으므로 관리자 API가 실제로 노출되기 전에 보호 방식(예: 최초 관리자는 DB
+  시딩, 이후 생성은 `hasRole('ADMIN')`) 결정 필요
 - 할인 적용 후 최종 결제금액이 0원이 되는 경우(Toss 결제 자체를 생략)는 범위 밖 — 현재는
   `INVALID_DISCOUNT_AMOUNT` 예외로 0원 이하 결제 자체를 차단
 

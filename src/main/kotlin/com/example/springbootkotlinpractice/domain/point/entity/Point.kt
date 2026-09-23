@@ -24,6 +24,19 @@ class Point(
     @Column(name = "id")
     val id: Long = 0L
 
+    @Column(name = "is_deleted", nullable = false, comment = "삭제 여부 (soft delete, 0: 미삭제, 1: 삭제)")
+    var isDeleted: Boolean = false
+
+    // 유효 일수는 적립 시점에 만료 일시로 계산되어 member_points에 고정되므로, 수정해도 기존 적립분은 바뀌지 않는다
+    fun update(name: String, validDays: Int?) {
+        this.name = name
+        this.validDays = validDays
+    }
+
+    fun delete() {
+        isDeleted = true
+    }
+
     companion object {
         fun of(name: String, validDays: Int? = null): Point {
             return Point(

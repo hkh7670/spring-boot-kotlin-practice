@@ -53,6 +53,33 @@ class ProductSearchRepositoryImpl(
         return response.items().count { it.error() == null }
     }
 
+    override fun index(document: ProductDocument) {
+        openSearchClient.index<ProductDocument> { request ->
+            request.index(ProductDocument.INDEX_NAME)
+                .id(document.productId.toString())
+                .document(document)
+        }
+    }
+
+    override fun delete(productId: Long) {
+        openSearchClient.delete { request ->
+            request.index(ProductDocument.INDEX_NAME).id(productId.toString())
+        }
+    }
+
+    override fun bulkDelete(productIds: List<Long>) {
+        if (productIds.isEmpty()) return
+
+        val operations = productIds.map { productId ->
+            BulkOperation.of { operation ->
+                operation.delete { delete ->
+                    delete.index(ProductDocument.INDEX_NAME).id(productId.toString())
+                }
+            }
+        }
+        openSearchClient.bulk { it.operations(operations) }
+    }
+
     override fun suggest(keyword: String, size: Int): List<ProductDocument> {
         val response = openSearchClient.search(
             { search ->

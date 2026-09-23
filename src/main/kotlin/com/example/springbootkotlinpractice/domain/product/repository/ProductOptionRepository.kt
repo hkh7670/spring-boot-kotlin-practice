@@ -12,6 +12,12 @@ interface ProductOptionRepository : JpaRepository<ProductOption, Long> {
 
     fun findByProductId(productId: Long): List<ProductOption>
 
+    fun findByIdAndProductId(id: Long, productId: Long): ProductOption?
+
+    fun existsByProductIdAndName(productId: Long, name: String): Boolean
+
+    fun existsByProductIdAndNameAndIdNot(productId: Long, name: String, id: Long): Boolean
+
     // 상품 목록 화면의 상품별 재고 합계(품절 배지) + 최저가("N원부터")용 배치 집계
     @Query(
         "SELECT po.product.id AS productId, COALESCE(SUM(po.stockCount), 0) AS totalStock, " +
@@ -20,12 +26,18 @@ interface ProductOptionRepository : JpaRepository<ProductOption, Long> {
     )
     fun findAggregatesByProductIdIn(@Param("productIds") productIds: List<Long>): List<ProductOptionAggregate>
 
-    // 단건 조회 시 Product를 함께 fetch join (주문 생성 시 가격 계산에 필요)
-    @Query("SELECT po FROM ProductOption po JOIN FETCH po.product WHERE po.id = :id")
+    // 단건 조회 시 Product를 함께 fetch join (주문 생성 시 가격 계산에 필요). 삭제된 상품의 옵션은 제외한다
+    @Query(
+        "SELECT po FROM ProductOption po JOIN FETCH po.product " +
+                "WHERE po.id = :id AND po.product.isDeleted = false"
+    )
     fun findByIdFetchProduct(@Param("id") id: Long): ProductOption?
 
-    // 장바구니 조회용 배치 fetch join (N+1 회피)
-    @Query("SELECT po FROM ProductOption po JOIN FETCH po.product WHERE po.id IN :ids")
+    // 장바구니 조회용 배치 fetch join (N+1 회피). 삭제된 상품의 옵션은 제외한다
+    @Query(
+        "SELECT po FROM ProductOption po JOIN FETCH po.product " +
+                "WHERE po.id IN :ids AND po.product.isDeleted = false"
+    )
     fun findByIdInFetchProduct(@Param("ids") ids: List<Long>): List<ProductOption>
 
     // 재고가 충분할 때만 원자적으로 차감한다 (동시 주문에 의한 초과 판매 방지). 반환값이 0이면 재고 부족을 의미한다.

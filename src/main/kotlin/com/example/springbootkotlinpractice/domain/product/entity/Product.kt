@@ -33,6 +33,27 @@ class Product(
     @Column(name = "id", comment = "상품 고유 식별자")
     val id: Long = 0L
 
+    @Column(name = "is_deleted", nullable = false, comment = "삭제 여부 (soft delete, 0: 미삭제, 1: 삭제)")
+    var isDeleted: Boolean = false
+
+    fun update(
+        name: String,
+        description: String?,
+        imageUrl: String?,
+        categoryId: Long?,
+        vendorId: Long?,
+    ) {
+        this.name = name
+        this.description = description
+        this.imageUrl = imageUrl
+        this.categoryId = categoryId
+        this.vendorId = vendorId
+    }
+
+    fun delete() {
+        isDeleted = true
+    }
+
     companion object {
         fun of(
             name: String,

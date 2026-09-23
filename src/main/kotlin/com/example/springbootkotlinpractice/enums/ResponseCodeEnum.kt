@@ -46,6 +46,13 @@ enum class ResponseCodeEnum(
     NOT_ENOUGH_POINT(HttpStatus.CONFLICT, "1030", "사용 가능한 포인트가 부족합니다."),
     INVALID_DISCOUNT_AMOUNT(HttpStatus.BAD_REQUEST, "1031", "할인 적용 후 결제 금액이 0원 이하가 될 수 없습니다."),
     ADMIN_LOGIN_NOT_ALLOWED(HttpStatus.FORBIDDEN, "1032", "비활성 또는 탈퇴한 관리자는 로그인할 수 없습니다."),
+    NOT_FOUND_COUPON(HttpStatus.NOT_FOUND, "1033", "쿠폰 정보가 존재하지 않습니다."),
+    NOT_FOUND_POINT(HttpStatus.NOT_FOUND, "1034", "포인트 정보가 존재하지 않습니다."),
+    NOT_FOUND_CATEGORY(HttpStatus.NOT_FOUND, "1035", "카테고리 정보가 존재하지 않습니다."),
+    NOT_FOUND_VENDOR(HttpStatus.NOT_FOUND, "1036", "업체 정보가 존재하지 않습니다."),
+    DUPLICATED_PRODUCT_OPTION_NAME(HttpStatus.CONFLICT, "1037", "이미 사용중인 옵션 명입니다."),
+    COUPON_ALREADY_ISSUED(HttpStatus.CONFLICT, "1038", "이미 발급된 쿠폰은 이름 외의 조건을 수정할 수 없습니다."),
+    DUPLICATED_MEMBER_COUPON(HttpStatus.CONFLICT, "1039", "이미 해당 쿠폰을 발급받은 회원이 있습니다."),
 
     // Auth Error (4000 ~)
     INVALID_JWT_TOKEN(HttpStatus.UNAUTHORIZED, "4000", "유효하지 않은 JWT Token 입니다."),

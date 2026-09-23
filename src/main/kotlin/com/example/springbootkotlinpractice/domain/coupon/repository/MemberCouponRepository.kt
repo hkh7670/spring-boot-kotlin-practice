@@ -15,6 +15,18 @@ interface MemberCouponRepository : JpaRepository<MemberCoupon, Long> {
 
     fun findByMemberIdAndStatus(memberId: Long, status: MemberCouponStatus): List<MemberCoupon>
 
+    fun existsByCouponId(couponId: Long): Boolean
+
+    // 이미 이 쿠폰을 발급받은 회원 ID만 골라낸다(중복 발급 사전 검증용)
+    @Query(
+        "SELECT mc.memberId FROM MemberCoupon mc " +
+                "WHERE mc.couponId = :couponId AND mc.memberId IN :memberIds"
+    )
+    fun findIssuedMemberIds(
+        @Param("couponId") couponId: Long,
+        @Param("memberIds") memberIds: List<Long>,
+    ): List<Long>
+
     // UNUSED 상태일 때만 사용 처리(원자적 조건부 UPDATE) — decreaseStock()과 동일 패턴.
     // 0건이면 이미 사용됐거나 존재하지 않는 쿠폰이라는 뜻. 벌크 UPDATE는 JPA Auditing을 안 타므로
     // updated_datetime을 직접 갱신한다

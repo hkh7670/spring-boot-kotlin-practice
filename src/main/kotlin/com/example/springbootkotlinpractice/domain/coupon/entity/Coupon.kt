@@ -47,6 +47,21 @@ class Coupon(
     @Column(name = "id")
     val id: Long = 0L
 
+    @Column(name = "is_deleted", nullable = false, comment = "삭제 여부 (soft delete, 0: 미삭제, 1: 삭제)")
+    var isDeleted: Boolean = false
+
+    // 할인 방식(discountType)과 마감 일시(validUntil)는 수정할 수 없다(바꾸려면 새 쿠폰을 만든다)
+    fun update(name: String, discountValue: Int, maxDiscountPrice: Int?, minOrderPrice: Int) {
+        this.name = name
+        this.discountValue = discountValue
+        this.maxDiscountPrice = maxDiscountPrice
+        this.minOrderPrice = minOrderPrice
+    }
+
+    fun delete() {
+        isDeleted = true
+    }
+
     // 정액/정률 방식에 맞춰 실제 할인 금액을 계산한다. 정률이면 maxDiscountPrice로 상한을 건다
     fun calculateDiscountPrice(productTotalPrice: Int): Int {
         val rawDiscount = when (discountType) {

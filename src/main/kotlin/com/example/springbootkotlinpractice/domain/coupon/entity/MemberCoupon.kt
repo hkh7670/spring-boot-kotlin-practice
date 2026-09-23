@@ -10,13 +10,20 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
 
 // 원자적 상태 전이(사용 처리/원복)는 MemberCouponRepository.useIfUnused()/restoreIfUsedByOrder()
 // (조건부 UPDATE)로 처리한다 — Order.status 전환과 동일한 컨벤션. 이 엔티티의 status는 조회용일 뿐,
 // 여기서 직접 값을 바꾸지 않는다.
 @Entity
-@Table(name = "member_coupons", comment = "회원별 쿠폰 발급/보유 내역")
+@Table(
+    name = "member_coupons",
+    uniqueConstraints = [
+        UniqueConstraint(name = "uq_member_coupons_01", columnNames = ["member_id", "coupon_id"]),
+    ],
+    comment = "회원별 쿠폰 발급/보유 내역",
+)
 class MemberCoupon(
 
     @Column(

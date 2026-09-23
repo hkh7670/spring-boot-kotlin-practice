@@ -49,7 +49,7 @@ class ProductService(
 
     @Transactional(readOnly = true)
     fun getProduct(productId: Long): ProductDetailResponse {
-        val product = productRepository.findByIdOrNull(productId)
+        val product = productRepository.findByIdAndIsDeletedFalse(productId)
             ?: throw ApiErrorException(ResponseCodeEnum.NOT_FOUND_PRODUCT)
 
         val categoryName = product.categoryId?.let { categoryRepository.findByIdOrNull(it)?.name }

@@ -23,4 +23,7 @@ interface MemberRepository : JpaRepository<Member, Long>, MemberRepositoryCustom
     fun existsByEmailAndJoinProvider(email: String, joinProvider: JoinProvider): Boolean
 
     fun existsByUuid(uuid: String): Boolean
+
+    // 암호화된 PII를 로딩하지 않고 존재하는 회원 수만 센다(관리자 대량 발급 대상 검증용)
+    fun countByIdIn(ids: Collection<Long>): Long
 }

@@ -95,6 +95,7 @@ CREATE TABLE coupons
     max_discount_price INT           NULL COMMENT '정률 할인 시 최대 할인 금액 (FIXED이면 NULL)',
     min_order_price    INT DEFAULT 0 NOT NULL COMMENT '쿠폰 적용 가능한 최소 주문 금액(상품 금액 기준)',
     valid_until        DATETIME(6)   NOT NULL COMMENT '쿠폰 사용 가능 마감 일시 (캠페인 공통)',
+    is_deleted         TINYINT(1) DEFAULT 0 NOT NULL COMMENT '삭제 여부 (soft delete, 0: 미삭제, 1: 삭제)',
     created_datetime   DATETIME(6)   NOT NULL,
     updated_datetime   DATETIME(6)   NOT NULL
 )
@@ -106,6 +107,7 @@ CREATE TABLE points
         PRIMARY KEY,
     name             VARCHAR(100) NOT NULL COMMENT '포인트 지급 사유/종류 명',
     valid_days       INT          NULL COMMENT '발급일로부터 유효 일수 (NULL이면 무제한)',
+    is_deleted       TINYINT(1) DEFAULT 0 NOT NULL COMMENT '삭제 여부 (soft delete, 0: 미삭제, 1: 삭제)',
     created_datetime DATETIME(6)  NOT NULL,
     updated_datetime DATETIME(6)  NOT NULL
 )
@@ -123,7 +125,9 @@ CREATE TABLE member_coupons
     used_at          DATETIME(6)                   NULL COMMENT '사용 일시 (미사용 시 NULL)',
     expired_at       DATETIME(6)                   NOT NULL COMMENT '이 발급건의 사용 가능 마감 일시',
     created_datetime DATETIME(6)                   NOT NULL,
-    updated_datetime DATETIME(6)                   NOT NULL
+    updated_datetime DATETIME(6)                   NOT NULL,
+    CONSTRAINT uq_member_coupons_01
+        UNIQUE (member_id, coupon_id)
 )
     COMMENT '회원별 쿠폰 발급/보유 내역';
 
@@ -266,6 +270,7 @@ CREATE TABLE products
     image_url        VARCHAR(500)  NULL COMMENT '대표 이미지 URL',
     category_id      BIGINT        NULL COMMENT '카테고리 ID (categories.id, 소분류)',
     vendor_id        BIGINT        NULL COMMENT '업체 ID (vendors.id)',
+    is_deleted       TINYINT(1) DEFAULT 0 NOT NULL COMMENT '삭제 여부 (soft delete, 0: 미삭제, 1: 삭제)',
     created_datetime DATETIME(6)   NOT NULL,
     updated_datetime DATETIME(6)   NOT NULL
 )

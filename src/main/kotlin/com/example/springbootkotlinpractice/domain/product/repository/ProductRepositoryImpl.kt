@@ -17,6 +17,7 @@ class ProductRepositoryImpl(
             .select(product.count())
             .from(product)
             .where(
+                product.isDeleted.isFalse,
                 categoryIdEq(categoryId),
                 keywordContains(keyword),
             )
@@ -29,6 +30,7 @@ class ProductRepositoryImpl(
         val content = queryFactory
             .selectFrom(product)
             .where(
+                product.isDeleted.isFalse,
                 categoryIdEq(categoryId),
                 keywordContains(keyword),
             )
